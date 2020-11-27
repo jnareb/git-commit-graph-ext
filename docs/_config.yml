@@ -1,4 +1,4 @@
-repository: jnareb/git_commit_graph_ext
+repository: jnareb/git-commit-graph-ext
 output: web
 topnav_title: git_commit_graph_ext
 site_title: git_commit_graph_ext
@@ -23,6 +23,7 @@ exclude:
  
 exclude: [vendor]
 
+encoding: "UTF-8"
 highlighter: rouge
 markdown: kramdown
 kramdown:
