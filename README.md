@@ -26,7 +26,7 @@ Only the first command performs straight reachability query.
 
 ## Slides
 
-This topic is covered in much more details in slides for the presentation "[_Graph operations in Git version control system_][google-drive-slides]" by Jakub Narêbski (2019).
+This topic is covered in much more details in slides for the presentation "[_Graph operations in Git version control system_][google-drive-slides]" by Jakub Narebski (2019).
 
 Those slides are also available to read on SlideShare and on Speaker Deck:
 
