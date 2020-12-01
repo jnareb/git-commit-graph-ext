@@ -1,6 +1,26 @@
 # Commit graph labeling for speeding up Git commands
-> Git uses various clever methods for making operations on very large
+> Explore possible extensions to the serialized commit-graph format in Git, including adding reachability indexes for graph of revisions
 
+Git uses various clever methods for making operations on very large
+repositories faster, from bitmap indices for `git fetch`[[1][]], to generation
+numbers (also known as topological levels) in the commit-graph file for
+commit graph traversal operations like `git log --graph`[[2][]].
+
+The goal of this project is to examine various possible improvements that
+can make Git even faster, other than just using generation numbers.
+For example there are many methods to make reachability queries in very large graphs
+faster; it remains to be seen if they would work on large commit graphs
+(the graph of project history) as well as they work on other real-life graphs.
+
+Ultimately, this project is about examining extension to Git's [commit-graph][]
+feature, including mainly adding reachability indexes / labels
+for the DAG (Directed Acyclic Graph) of revisions.
+
+[1]: https://githubengineering.com/counting-objects/ "Counting Objects | The GitHub Blog"
+[2]: https://devblogs.microsoft.com/devops/supercharging-the-git-commit-graph-iii-generations/ "Supercharging the Git Commit Graph III: Generations and Graph Algorithms | Azure DevOps Blog"
+[commit-graph]: https://git-scm.com/docs/commit-graph
+
+----
 
 This project, while mainly exploratory in nature, is using [`nbdev`][nbdev] library for literate programming in Python using Jupyter Notebooks -- not to create a Python module (to publish in PyPi and/or Conda), but to allow for splitting it up.
 
