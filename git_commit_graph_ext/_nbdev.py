@@ -2,7 +2,9 @@
 
 __all__ = ["index", "modules", "custom_doc_links", "git_url"]
 
-index = {"crown_DAG": "03_example_graphs.ipynb"}
+index = {"crown_DAG": "03_example_graphs.ipynb",
+         "small_DAG_FELINE": "03_example_graphs.ipynb",
+         "tree_DAG": "03_example_graphs.ipynb"}
 
 modules = ["example_graphs.py"]
 
