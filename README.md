@@ -51,8 +51,9 @@ Only the first command performs straight reachability query.
 1. [Graphs in Python](01_tools.ipynb)
 2. [Related works: various reachability labelings](02_related.ipynb)
 3. [Example directed graphs](03_example_graphs.ipynb)
-4. [Reachability index](04_reachability_index.ipynb)
-5. [Topological levels](05_levels.ipynb)
+4. Drawing graphs
+5. [Reachability index](05_reachability_index.ipynb)
+6. [Topological levels](06_levels.ipynb)
 
 ## Slides
 
