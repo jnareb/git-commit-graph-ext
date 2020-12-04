@@ -44,6 +44,16 @@ Such operations include:
  
 Only the first command performs straight reachability query.
 
+## Table of contents
+
+> Warning: this is not generated automatically
+
+1. [Graphs in Python](01_tools.ipynb)
+2. [Related works: various reachability labelings](02_related.ipynb)
+3. [Example directed graphs](03_example_graphs.ipynb)
+4. [Reachability index](04_reachability_index.ipynb)
+5. [Topological levels](05_levels.ipynb)
+
 ## Slides
 
 This topic is covered in much more details in slides for the presentation "[_Graph operations in Git version control system_][google-drive-slides]" by Jakub Narebski (2019).
