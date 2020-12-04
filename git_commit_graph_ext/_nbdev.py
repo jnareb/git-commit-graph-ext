@@ -7,9 +7,11 @@ index = {"crown_DAG": "03_example_graphs.ipynb",
          "tree_DAG": "03_example_graphs.ipynb",
          "levels_DAG_FELINE": "03_example_graphs.ipynb",
          "RCH_graph": "03_example_graphs.ipynb",
-         "commit_graph": "03_example_graphs.ipynb"}
+         "commit_graph": "03_example_graphs.ipynb",
+         "find_levels": "05_levels.ipynb"}
 
-modules = ["example_graphs.py"]
+modules = ["example_graphs.py",
+           "labelling/levels.py"]
 
 doc_url = "https://jnareb.github.io/git-commit-graph-ext/"
 
