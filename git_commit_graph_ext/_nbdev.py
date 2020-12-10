@@ -14,7 +14,8 @@ index = {"crown_DAG": "03_example_graphs.ipynb",
 
 modules = ["example_graphs.py",
            "labelling/levels.py",
-           "labelling/dfs_intervals.py"]
+           "labelling/dfs_intervals.py",
+           "reachability.py"]
 
 doc_url = "https://jnareb.github.io/git-commit-graph-ext/"
 

@@ -55,6 +55,7 @@ Only the first command performs straight reachability query.
 5. [Reachability index](05_reachability_index.ipynb)
 6. [Topological levels](06_levels.ipynb)
 7. [DFS intervals labelling](07_interval_labels.ipynb)
+8. [Reachability queries](08_reach.ipynb)
 
 ## Slides
 
