@@ -8,7 +8,9 @@ index = {"crown_DAG": "03_example_graphs.ipynb",
          "levels_DAG_FELINE": "03_example_graphs.ipynb",
          "RCH_graph": "03_example_graphs.ipynb",
          "commit_graph": "03_example_graphs.ipynb",
-         "find_levels": "06_levels.ipynb"}
+         "find_levels": "06_levels.ipynb",
+         "find_dfs_spanning": "07_interval_labels.ipynb",
+         "find_dfs_intervals": "07_interval_labels.ipynb"}
 
 modules = ["example_graphs.py",
            "labelling/levels.py",
