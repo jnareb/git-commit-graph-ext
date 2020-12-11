@@ -10,7 +10,13 @@ index = {"crown_DAG": "03_example_graphs.ipynb",
          "commit_graph": "03_example_graphs.ipynb",
          "find_levels": "06_levels.ipynb",
          "find_dfs_spanning": "07_interval_labels.ipynb",
-         "find_dfs_intervals": "07_interval_labels.ipynb"}
+         "find_dfs_intervals": "07_interval_labels.ipynb",
+         "generic_is_reachable": "08_reach.ipynb",
+         "generic_is_reachable_dfs": "08_reach.ipynb",
+         "reachable_positive_cut": "08_reach.ipynb",
+         "reachable_negative_cut": "08_reach.ipynb",
+         "walk_spanning": "08_reach.ipynb",
+         "generic_is_reachable_bfs": "08_reach.ipynb"}
 
 modules = ["example_graphs.py",
            "labelling/levels.py",
