@@ -19,7 +19,6 @@ def crown_DAG():
     DG.add_edges_from([(1,2),(3,4),(1,'v'),(3,'v'),('u',2),('u',4)])
     return DG
 
-
 # Cell
 def small_DAG_FELINE():
     """Create small DAG (example in Figure 2 in FELINE paper)
@@ -33,7 +32,6 @@ def small_DAG_FELINE():
     sd.add_nodes_from([chr(c) for c in range(ord('a'),ord('h')+1)])
     sd.add_edges_from([('a','c'),('a','d'),('a','e'),('b','f'),('b','g'),('c','h'),('e','h'),('f','h')])
     return sd
-
 
 # Cell
 def tree_DAG():
@@ -85,7 +83,6 @@ def levels_DAG_FELINE():
                        ('f','g'),('f','i')])
     return lf
 
-
 # Cell
 def RCH_graph():
     """Create RCH example graph (example in Figure 1 and 2 in PReaCH paper)
@@ -135,7 +132,6 @@ def RCH_graph():
         'o':(0,3),'p':(1,3),          'q':(3,3),
     }
     return ch
-
 
 # Cell
 def commit_graph():
