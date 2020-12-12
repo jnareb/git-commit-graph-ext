@@ -1,5 +1,5 @@
 # Commit graph labeling for speeding up Git commands
-> Explore possible extensions to the serialized commit-graph format in Git, including adding reachability indexes for graph of revisions
+> Explore possible extensions to the serialized commit-graph format in Git, including adding reachability indexes for the graph of revisions
 
 Git uses various clever methods for making operations on very large
 repositories faster, from bitmap indices for `git fetch`[[1][]], to generation
@@ -49,7 +49,7 @@ Only the first command performs straight reachability query.
 > Warning: this is not generated automatically
 
 1. [Graphs in Python](01_tools.ipynb)
-2. [Related works: various reachability labelings](02_related.ipynb)
+2. [Related works: various reachability labellings](02_related.ipynb)
 3. [Example directed graphs](03_example_graphs.ipynb)
 4. Drawing graphs
 5. [Reachability index](05_reachability_index.ipynb)
@@ -70,5 +70,5 @@ Those slides are also available to read on SlideShare and on Speaker Deck:
 
 ## TODO: Notebooks to split
 
-- [ ] [Reachability labels for version control graphs](Reachability_labels_for_version_control_graphs.ipynb) (approx 2% done)
-- [ ] [Reachability queries in large graphs](Reachability_queries_in_large_graphs.ipynb) (0% done)
+- [ ] [Reachability labels for version control graphs](_Reachability_labels_for_version_control_graphs.ipynb) (approx 2% done)
+- [ ] [Reachability queries in large graphs](_Reachability_queries_in_large_graphs.ipynb) (0% done)
