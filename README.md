@@ -70,5 +70,5 @@ Those slides are also available to read on SlideShare and on Speaker Deck:
 
 ## TODO: Notebooks to split
 
-- [ ] [Reachability labels for version control graphs](_Reachability_labels_for_version_control_graphs.ipynb) (approx 2% done)
-- [ ] [Reachability queries in large graphs](_Reachability_queries_in_large_graphs.ipynb) (0% done)
+- [ ] [Reachability labels for version control graphs](Reachability_labels_for_version_control_graphs.ipynb) (doing)
+- [ ] [Reachability queries in large graphs](Reachability_queries_in_large_graphs.ipynb) (0% done)
