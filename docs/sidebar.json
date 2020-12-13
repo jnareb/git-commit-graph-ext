@@ -1,8 +1,0 @@
-{
-  "git_commit_graph_ext": {
-    "Overview": "/",
-    "Graphs in Python": "tools.html",
-    "Related works: various reachability labelings": "related.html",
-    "Example directed graphs": "example_graphs.html"
-  }
-}
