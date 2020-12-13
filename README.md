@@ -1,3 +1,5 @@
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jnareb/git-commit-graph-ext/master)
+
 # Commit graph labeling for speeding up Git commands
 > Explore possible extensions to the serialized commit-graph format in Git, including adding reachability indexes for the graph of revisions
 
