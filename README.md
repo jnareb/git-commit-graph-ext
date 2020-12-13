@@ -1,4 +1,6 @@
+<!-- badges -->
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jnareb/git-commit-graph-ext/master)
+[![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/jnareb/git-commit-graph-ext)
 
 # Commit graph labeling for speeding up Git commands
 > Explore possible extensions to the serialized commit-graph format in Git, including adding reachability indexes for the graph of revisions
