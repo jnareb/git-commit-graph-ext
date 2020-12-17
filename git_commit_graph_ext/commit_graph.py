@@ -168,11 +168,11 @@ def repo_generate_adjlist(repo_path, out_dir="datasets", refresh=False):
         can be found.
     """
     out_pathname = _repo_name_to_out_path(repo_path, out_dir=out_dir)
-    # generate the adjacency list using git-log command
+    # generate the adjacency list using git-log command; note: skip pull requests
     if refresh or not out_pathname.exists():
         with out_pathname.open("w") as outfile:
             subprocess.run(['git', '-C', repo_path,
-                            'log', '--format="%h %p"', '--topo-order', '--all'],
+                            'log', '--format=%h %p', '--topo-order', '--branches'],
                            stdout=outfile)
     return out_pathname
 
@@ -276,4 +276,6 @@ def commit_graph(url, repo_name,
     """
     repo_path = Path(repos_dir) / repo_name
     get_repo(url, repo_path, refresh=reclone)
-    return repo_to_graph(repo_path, datasets_dir=datasets_dir, refresh=rescan)
+    graph = repo_to_graph(repo_path, datasets_dir=datasets_dir, refresh=rescan)
+    graph.name = repo_name + ' commit graph'
+    return graph
