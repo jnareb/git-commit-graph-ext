@@ -287,50 +287,184 @@ def commit_graph(url, repo_name,
     return graph
 
 # Cell
-def _repo_name_to_out_basename(repo_name, out_dir="datasets"):
-    """Create basename for file that would store graph's `DataFrame`s
+def _repo_basename(repo_path):
+    """Create name of repository out of its pathname
 
     This is a helper function used, among others, in ...
 
     Examples:
     ---------
-    >>>> _repo_name_to_out_basename('hellogitworld')
-    Path('datasets/hellogitworld')
-    >>>> _repo_name_to_out_basename('hellogitworld.git', out_dir='data')
-    Path('data/hellogitworld')
+    >>>> _repo_basename('hellogitworld')
+    'hellogitworld'
+    >>>> _repo_basename('repos/hellogitworld.git')
+    'hellogitworld'
+
+    Parameters
+    ----------
+    repo_path : str
+        Path to the Git repository, for example 'hellogitworld',
+        or 'hellogitworld.git', or 'repos/hellogitworld.git', or 'repos/hellogitworld/.git'
+        for Git repository cloned from <https://github.com/githubtraining/hellogitworld>
+
+    Returns
+    -------
+    str
+        The name of repository, to be later used as a base for commit graph name,
+        and the pathname of a file where to save information about thw history
+        structure of the repository.
+    """
+    # generate the name of the output file, as `pathlib.Path` object
+    # removing the '*.git' extension / suffix from `repo_path`, if needed
+    out_pathname = Path(repo_name).stem
+
+    # convert it to string
+    return str(out_pathname)
+
+
+def _commit_graph_name(repo_name):
+    """Create the name of a commit graph out of repository name.
+
+    This is a helper function used, among others, in ...
+
+    Examples:
+    ---------
+    >>>> _commit_graph_name('hellogitworld')
+    'hellogitworld-commit_graph'
 
     Parameters
     ----------
     repo_name : str
-        Name of the Git repository (`<graph>.name` can be used), for example
-        'hellogitworld' or 'hellogitworld.git' for Git repository cloned from
+        The name of the repository, for example the result of calling the
+        `_repo_basename()` function.
+
+    Returns
+    -------
+    str
+        The name of the commit graph of the repository, to be used as a base
+        for the pathname of a file where to save information about the history
+        structure of the repository.
+    """
+    return repo_name + '-commit_graph'
+
+
+def _repo_graph_name(repo_path):
+    """Create the name of a commit graph out of repository path (its pathname)
+
+    This is a helper function used, among others, in ...
+
+    Examples:
+    ---------
+    >>>> _repo_graph_name('repos/hellogitworld.git')
+    'hellogitworld-commit_graph'
+
+    Parameters
+    ----------
+    repo_path : str
+        Path to the Git repository (`<graph>.name` can be used), for example
+        'hellogitworld', or 'hellogitworld.git', or 'repos/hellogitworld.git',
+        or 'repos/hellogitworld/.git' for Git repository cloned from
         <https://github.com/githubtraining/hellogitworld>
+
+    Returns
+    -------
+    str
+        The name of the commit graph of the repository, to be used as a base
+        for the pathname of a file where to save information about the history
+        structure of the repository.
+    """
+    return _commit_graph_name(_repo_basename(repo_path))
+
+
+
+# Cell
+def _savefile_name(graph_name, out_dir='datasets', kind='df_edgelist', file_format='csv.gz'):
+    """Create filename for storing graph structure and other graph data
+
+    This is a helper function used, among others, in ...
+
+    Examples:
+    ---------
+    >>>> _savefile_name('example_graph')
+    Path('datasets/example_graph.df_edgelist.csv.gz')
+
+    Parameters
+    ----------
+    graph_name : str
+        Name of the graph (`<graph>.name` can be used).
 
     out_dir : str
         Directory where saved commit graph data would be stored.
         Defaults to "datasets".
 
+    kind : str
+        What type of data is stored in a file, and in what representation.
+        The default value is 'df_edgelist', used to store graph structure in
+        the edge list format in a `pandas.DataFrame`.
+
+    file_format : str
+        Format of a file, for example how the `DataFrame` is saved.
+        Defaults to 'csv.gz' (gzip-compressed Comma Separated Values).
+
     Returns
     -------
     Path
-        Basename of path to store graph structure or graph data.  To be
-        concatenated with data-describing suffix and a proper extension.
+        Path to the file storing the graph structure or graph data in
+        the appropriate representation and appropriate file format.
     """
     # The `out_dir` should not be None
     if out_dir is None:
         out_dir = "."
+
+    # compose the basename of the pathname
+    filename = graph_name
+    # TODO: there would special case for saving to HDF5 files, which can
+    # store multiple data in a single file, so there would be no need
+    # to add <kind> to basename of such output file
+    if kind is not None and kind != '':
+        filename += '.' + kind
+    if file_format is not None and file_format != '':
+        filename += '.' + file_format
     # generate the name of the output file, as `pathlib.Path` object
-    # removing the '*.git' extension / suffix from `repo_path`, if needed
-    out_pathname = Path(out_dir) / Path(repo_name).stem
-
-    return out_pathname
+    return Path(out_dir) / filename
 
 
-def _repo_name_to_edgelist_basename(repo_name, out_dir="datasets"):
-    return str(_repo_name_to_out_basename(repo_name, out_dir=out_dir)) + \
-           '-commit_graph'+'.df_edgelist'
+def _out_basename(graph_name, out_dir='datasets'):
+    return _savefile_name(graph_name, out_dir=out_dir, kind=None, file_format=None)
 
 
+def _repo_graph_savefile(repo_path, out_dir='datasets'):
+    """Create filename for storing adjacency list out of repository path
+
+    This is a helper function used, among others, in ...
+
+    Examples:
+    ---------
+    >>>> _repo_graph_savefile('repos/hellogitworld.git')
+    Path('datasets/hellogitworld-commit_graph.adjlist.txt')
+    >>>> _repo_graph_savefile('repos/hellogitworld.git', out_dir='data')
+    Path('data/hellogitworld-commit_graph.adjlist.txt')
+
+    Parameters
+    ----------
+    repo_path : str
+        Path to the Git repository, for example 'hellogitworld',
+        or 'hellogitworld.git', or 'repos/hellogitworld.git', or 'repos/hellogitworld/.git'
+        for Git repository cloned from <https://github.com/githubtraining/hellogitworld>
+
+    out_dir : str
+        Directory where extracted commit graph data would be stored.
+        Defaults to "datasets".
+
+    Returns
+    -------
+    Path
+        Path to the file storing the commit graph in the adjacency list
+        file format.
+
+        see: https://networkx.org/documentation/stable/reference/readwrite/adjlist.html
+    """
+    graph_name = _repo_graph_name(repo_path)
+    return _savefile_name(graph_name, out_dir=out_dir, kind='adjlist', file_format='txt')
 
 # Cell
 def graph_to_dataframe(graph):
@@ -344,8 +478,9 @@ def dataframe_to_graph(df):
 
 # Cell
 def save_graph_df(df, graph_name, datasets_dir='datasets', output_format='csv.gz', overwrite=False):
-    filename = _repo_name_to_edgelist_basename(graph_name, out_dir=datasets_dir) + \
-               '.'+output_format
+    filename = _savefile_name(graph_name, out_dir=datasets_dir,
+                              kind='df_edgelist', file_format=output_format)
+    print('-> filename:', filename)
     if not overwrite and Path(filename).is_file():
         return
     if output_format == 'csv' or output_format == 'csv.gz':
@@ -364,7 +499,7 @@ def save_graph(graph, graph_name=None, datasets_dir='datasets', output_format='c
         else:
             raise RuntimeError("Neither 'graph_name' parameter given, nor 'graph' has 'name' attribute")
 
-    print('graph_name: ', graph_name)
+    print('-> graph_name:', graph_name)
     save_graph_df(df, graph_name,
                   datasets_dir=datasets_dir, output_format=output_format, overwrite=overwrite)
 
@@ -377,8 +512,9 @@ def load_graph_df_from_file(filename, input_format='csv.gz'):
 
 
 def load_graph_df(graph_name, datasets_dir='datasets', input_format='csv.gz'):
-    filename = _repo_name_to_edgelist_basename(graph_name, out_dir=datasets_dir) + \
-               '.'+input_format
+    filename = _savefile_name(graph_name, out_dir=datasets_dir,
+                              kind='df_edgelist', file_format=input_format)
+    print('<- filename:', filename)
     return load_graph_df_from_file(filename, input_format=input_format)
 
 
