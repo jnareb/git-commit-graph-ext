@@ -23,20 +23,21 @@ index = {"crown_DAG": "03_example_graphs.ipynb",
          "repo_generate_adjlist": "09_git.ipynb",
          "repo_adjlist_to_graph": "09_git.ipynb",
          "repo_to_graph": "09_git.ipynb",
-         "graph_to_dataframe": "09_git.ipynb",
-         "dataframe_to_graph": "09_git.ipynb",
-         "save_graph_df": "09_git.ipynb",
-         "save_graph": "09_git.ipynb",
-         "load_graph_df_from_file": "09_git.ipynb",
-         "load_graph_df": "09_git.ipynb",
-         "compute_reachability_labels": "09_git.ipynb",
-         "graph_data_to_dataframe": "09_git.ipynb"}
+         "graph_to_dataframe": "10_checkpoint.ipynb",
+         "dataframe_to_graph": "10_checkpoint.ipynb",
+         "save_graph_df": "10_checkpoint.ipynb",
+         "save_graph": "10_checkpoint.ipynb",
+         "load_graph_df_from_file": "10_checkpoint.ipynb",
+         "load_graph_df": "10_checkpoint.ipynb",
+         "compute_reachability_labels": "10_checkpoint.ipynb",
+         "graph_data_to_dataframe": "10_checkpoint.ipynb"}
 
 modules = ["example_graphs.py",
            "labelling/levels.py",
            "labelling/dfs_intervals.py",
            "reachability.py",
-           "commit_graph.py"]
+           "commit_graph.py",
+           "checkpoint.py"]
 
 doc_url = "https://jnareb.github.io/git-commit-graph-ext/"
 

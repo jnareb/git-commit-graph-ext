@@ -61,6 +61,7 @@ Only the first command performs straight reachability query.
 7. [DFS intervals labelling](07_interval_labels.ipynb)
 8. [Reachability queries](08_reach.ipynb)
 9. [Extracting commit graphs from Git repositories](09_git.ipynb)
+10. [Checkpointing](10_checkpoint.ipynb)
 
 ## Slides
 

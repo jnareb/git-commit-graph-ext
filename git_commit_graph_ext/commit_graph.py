@@ -432,6 +432,8 @@ def _out_basename(graph_name, out_dir='datasets'):
     return _savefile_name(graph_name, out_dir=out_dir, kind=None, file_format=None)
 
 
+
+# Cell
 def _repo_graph_savefile(repo_path, out_dir='datasets'):
     """Create filename for storing adjacency list out of repository path
 
