@@ -62,6 +62,7 @@ Only the first command performs straight reachability query.
 8. [Reachability queries](08_reach.ipynb)
 9. [Extracting commit graphs from Git repositories](09_git.ipynb)
 10. [Checkpointing](10_checkpoint.ipynb)
+11. [Graph datasets](11_datasets.ipynb)
 
 ## Slides
 
@@ -77,4 +78,4 @@ Those slides are also available to read on SlideShare and on Speaker Deck:
 ## TODO: Notebooks to split
 
 - [ ] [Reachability labels for version control graphs](Reachability_labels_for_version_control_graphs.ipynb) (doing)
-- [ ] [Reachability queries in large graphs](Reachability_queries_in_large_graphs.ipynb) (0% done)
+- [x] [Reachability queries in large graphs](Reachability_queries_in_large_graphs.ipynb) (done)
