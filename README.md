@@ -63,6 +63,7 @@ Only the first command performs straight reachability query.
 9. [Extracting commit graphs from Git repositories](09_git.ipynb)
 10. [Checkpointing](10_checkpoint.ipynb)
 11. [Graph datasets](11_datasets.ipynb)
+12. [Large Git repositories](12_repos.ipynb)
 
 ## Slides
 
