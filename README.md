@@ -64,6 +64,8 @@ Only the first command performs straight reachability query.
 10. [Checkpointing](10_checkpoint.ipynb)
 11. [Graph datasets](11_datasets.ipynb)
 12. [Large Git repositories](12_repos.ipynb)
+13. Graph stats
+14. [Reachability evaluation](14_evaluation.ipynb)
 
 ## Slides
 

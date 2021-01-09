@@ -46,7 +46,8 @@ modules = ["example_graphs.py",
            "labelling/dfs_intervals.py",
            "reachability.py",
            "commit_graph.py",
-           "checkpoint.py"]
+           "checkpoint.py",
+           "reachability_evaluation.py"]
 
 doc_url = "https://jnareb.github.io/git-commit-graph-ext/"
 
