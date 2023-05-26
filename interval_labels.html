@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.357">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="min-post intervals labeling and its extensions, as used in GRAIL, FERRARI (and PReaCH)">
+
+<title>git_commit_graph_ext - DFS Intervals Labelling</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<link rel="stylesheet" href="styles.css">
+<meta property="og:title" content="git_commit_graph_ext - DFS Intervals Labelling">
+<meta property="og:description" content="min-post intervals labeling and its extensions, as used in GRAIL, FERRARI (and PReaCH)">
+<meta property="og:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Tree_graph.svg/162px-Tree_graph.svg.png">
+<meta property="og:site-name" content="git_commit_graph_ext">
+<meta name="twitter:title" content="git_commit_graph_ext - DFS Intervals Labelling">
+<meta name="twitter:description" content="min-post intervals labeling and its extensions, as used in GRAIL, FERRARI (and PReaCH)">
+<meta name="twitter:image" content="https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Tree_graph.svg/162px-Tree_graph.svg.png">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+
+<body class="nav-sidebar floating nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">git_commit_graph_ext</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools ms-auto">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+      <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./interval_labels.html">DFS Intervals Labelling</a></li></ol></nav>
+      <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+      </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Commit graph labeling for speeding up Git commands</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./tools.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Graphs in Python</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./related.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Related works: various reachability labelings</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./example_graphs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Example directed graphs</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./reachability_index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reachability index</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./levels.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Topological levels</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./interval_labels.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">DFS Intervals Labelling</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./reach.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reachability queries</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./git.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Extracting commit graphs from Git repositories</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./checkpoint.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Checkpointing</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./datasets.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Graph datasets</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./repos.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Large Git repositories</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reachability evaluation</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./a.09_git_explore.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exploring extraction of commit graphs from Git repositories, and examining their shape and stats</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#definitions-out-tree-spanning-tree-tree-cover-etc." id="toc-definitions-out-tree-spanning-tree-tree-cover-etc." class="nav-link active" data-scroll-target="#definitions-out-tree-spanning-tree-tree-cover-etc.">Definitions: out-tree, spanning tree / tree cover, etc.</a></li>
+  <li><a href="#min-post-intervals-in-directed-trees" id="toc-min-post-intervals-in-directed-trees" class="nav-link" data-scroll-target="#min-post-intervals-in-directed-trees"><em>min-post</em> intervals in directed trees</a>
+  <ul class="collapse">
+  <li><a href="#min-post-interval-properties-for-trees" id="toc-min-post-interval-properties-for-trees" class="nav-link" data-scroll-target="#min-post-interval-properties-for-trees">Min-post interval properties for trees</a></li>
+  </ul></li>
+  <li><a href="#min-post-intervals-in-directed-acyclic-graphs-dags" id="toc-min-post-intervals-in-directed-acyclic-graphs-dags" class="nav-link" data-scroll-target="#min-post-intervals-in-directed-acyclic-graphs-dags"><em>min-post</em> intervals in directed acyclic graphs (DAGs)</a>
+  <ul class="collapse">
+  <li><a href="#min-post-interval-for-a-spanning-tree-positive-cut-filter" id="toc-min-post-interval-for-a-spanning-tree-positive-cut-filter" class="nav-link" data-scroll-target="#min-post-interval-for-a-spanning-tree-positive-cut-filter"><em>min-post</em> interval for a spanning tree <em>(positive-cut filter)</em></a></li>
+  <li><a href="#min-post-interval-for-a-dag-negative-cut-filter" id="toc-min-post-interval-for-a-dag-negative-cut-filter" class="nav-link" data-scroll-target="#min-post-interval-for-a-dag-negative-cut-filter"><em>min-post</em> interval for a DAG <em>(negative-cut filter)</em></a></li>
+  </ul></li>
+  <li><a href="#extending-min-post-intervals-for-graphs" id="toc-extending-min-post-intervals-for-graphs" class="nav-link" data-scroll-target="#extending-min-post-intervals-for-graphs">Extending <em>min-post</em> intervals for graphs</a>
+  <ul class="collapse">
+  <li><a href="#multiple-intervals-labelling-grail-todo" id="toc-multiple-intervals-labelling-grail-todo" class="nav-link" data-scroll-target="#multiple-intervals-labelling-grail-todo">Multiple intervals labelling: GRAIL (TODO)</a></li>
+  <li><a href="#extending-interval-labelling-preach" id="toc-extending-interval-labelling-preach" class="nav-link" data-scroll-target="#extending-interval-labelling-preach">Extending interval labelling: PReaCH</a></li>
+  <li><a href="#extending-interval-labelling-ferrari-todo" id="toc-extending-interval-labelling-ferrari-todo" class="nav-link" data-scroll-target="#extending-interval-labelling-ferrari-todo">Extending interval labelling: FERRARI (TODO)</a></li>
+  </ul></li>
+  <li><a href="#visualizing-dfs-intervals-on-example-graphs" id="toc-visualizing-dfs-intervals-on-example-graphs" class="nav-link" data-scroll-target="#visualizing-dfs-intervals-on-example-graphs">Visualizing DFS intervals on example graphs</a>
+  <ul class="collapse">
+  <li><a href="#examples-of-spanning-trees-and-min-post-tree-intervals-labelling" id="toc-examples-of-spanning-trees-and-min-post-tree-intervals-labelling" class="nav-link" data-scroll-target="#examples-of-spanning-trees-and-min-post-tree-intervals-labelling">Examples of spanning trees and min-post tree intervals labelling</a></li>
+  <li><a href="#post-traversal-index-vs-backward-topological-level-drawing-of-example-graphs" id="toc-post-traversal-index-vs-backward-topological-level-drawing-of-example-graphs" class="nav-link" data-scroll-target="#post-traversal-index-vs-backward-topological-level-drawing-of-example-graphs">Post-traversal index vs backward topological level drawing of example graphs</a></li>
+  </ul></li>
+  <li><a href="#computing-dfs-intervals-labelling" id="toc-computing-dfs-intervals-labelling" class="nav-link" data-scroll-target="#computing-dfs-intervals-labelling">Computing DFS intervals labelling</a>
+  <ul class="collapse">
+  <li><a href="#computing-the-spanning-tree" id="toc-computing-the-spanning-tree" class="nav-link" data-scroll-target="#computing-the-spanning-tree">Computing the spanning tree</a></li>
+  <li><a href="#find_dfs_spanning" id="toc-find_dfs_spanning" class="nav-link" data-scroll-target="#find_dfs_spanning">find_dfs_spanning</a></li>
+  <li><a href="#computing-min-post-tree-intervals-positive-cut-filter" id="toc-computing-min-post-tree-intervals-positive-cut-filter" class="nav-link" data-scroll-target="#computing-min-post-tree-intervals-positive-cut-filter">Computing min-post tree intervals (positive-cut filter)</a></li>
+  <li><a href="#find_dfs_intervals" id="toc-find_dfs_intervals" class="nav-link" data-scroll-target="#find_dfs_intervals">find_dfs_intervals</a></li>
+  <li><a href="#computing-min-post-graph-intervals-negative-cut-filter-todo" id="toc-computing-min-post-graph-intervals-negative-cut-filter-todo" class="nav-link" data-scroll-target="#computing-min-post-graph-intervals-negative-cut-filter-todo">Computing min-post graph intervals (negative-cut filter) (TODO)</a></li>
+  <li><a href="#computing-preach-extensions-to-min-post-intervals" id="toc-computing-preach-extensions-to-min-post-intervals" class="nav-link" data-scroll-target="#computing-preach-extensions-to-min-post-intervals">Computing PReaCH extensions to min-post intervals</a></li>
+  <li><a href="#find_dfs_intervals_extra" id="toc-find_dfs_intervals_extra" class="nav-link" data-scroll-target="#find_dfs_intervals_extra">find_dfs_intervals_extra</a></li>
+  </ul></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+<div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/issues/new" class="toc-action">Report an issue</a></p></div></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">DFS Intervals Labelling</h1>
+</div>
+
+<div>
+  <div class="description">
+    <em>min-post</em> intervals labeling and its extensions, as used in GRAIL, FERRARI (and PReaCH)
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<!-- WARNING: THIS FILE WAS AUTOGENERATED! DO NOT EDIT! -->
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Imports for the module</p>
+<section id="definitions-out-tree-spanning-tree-tree-cover-etc." class="level2">
+<h2 class="anchored" data-anchor-id="definitions-out-tree-spanning-tree-tree-cover-etc.">Definitions: out-tree, spanning tree / tree cover, etc.</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Tree_graph.svg/162px-Tree_graph.svg.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">A tree in graph theory (Wikipedia)</figcaption>
+</figure>
+</div>
+<p>In graph theory, a <strong>tree</strong> is an undirected graph in which any two vertices are connected by exactly one path, or equivalently a connected acyclic undirected graph.</p>
+<p><img src="https://static.cambridge.org/binary/version/id/urn:cambridge.org:id:binary:20171027092037172-0306:9781316105450:08931fig13_6.png?pub-status=live" width="60%"></p>
+<p>In graph theory, a <strong>directed rooted tree</strong> or an <strong>arborescence</strong>, or <strong>out-tree</strong> is a directed graph in which, for a vertex <span class="math inline">\(u\)</span> called the root and any other vertex <span class="math inline">\(v\)</span>, there is exactly one directed path from <span class="math inline">\(u\)</span> to <span class="math inline">\(v\)</span>. Equivalently, an arborescence is a directed, rooted tree in which all edges point away from the root.</p>
+<p>Every directed rooted tree is a directed acyclic graph (DAG), but not every DAG is a tree.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>here <em>root</em> denotes a source node / verted, with in-degree of zero.</p>
+</div>
+</div>
+<p>A <strong>directed rooted forest</strong> is a disjoint union of directed rooted trees. It is called <strong>branching</strong> or <strong>out-forest</strong> if all its edges point away from the root in each rooted tree.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/4x4_grid_spanning_tree.svg/240px-4x4_grid_spanning_tree.svg.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">A 4x4 grid graph and one of its spanning trees (Wikipedia)</figcaption>
+</figure>
+</div>
+<p>In the mathematical field of graph theory, a <strong>spanning tree</strong> <span class="math inline">\(T\)</span> of an undirected graph <span class="math inline">\(G\)</span> is a subgraph that is a tree which includes all of the vertices of <span class="math inline">\(G\)</span>, with a minimum possible number of edges.</p>
+<p>A <strong>full spanning forest</strong> in an undirected graph (possibly not connected) is a maximal acyclic subgraph of the given graph, or equivalently a graph consisting of a spanning tree in each connected component of the graph.</p>
+<p>Given a vertex <span class="math inline">\(v\)</span> on a directed multigraph <span class="math inline">\(G\)</span>, an <strong>oriented spanning out-tree</strong>, or <strong>tree cover</strong> <span class="math inline">\(T(G)\)</span> rooted at <span class="math inline">\(v\)</span> is an acyclic subgraph of <span class="math inline">\(G\)</span> in which every vertex other than <span class="math inline">\(v\)</span> has in-degree 1.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/colab/small_DAG_spanning_tree_min-post.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Small DAG with the spanning out-forest overlay and min-post intervals</figcaption>
+</figure>
+</div>
+<p>Given directed acyclic graph <span class="math inline">\(G\)</span>, a <strong>spanning forest</strong>, or <strong>oriented spanning out-forest</strong> is such its subgraph, for which the following is true: - it includes all original (full) graph nodes - there is at most one incoming edge per node (every vertex has in-degree 1 or 0)</p>
+</section>
+<section id="min-post-intervals-in-directed-trees" class="level2">
+<h2 class="anchored" data-anchor-id="min-post-intervals-in-directed-trees"><em>min-post</em> intervals in directed trees</h2>
+<p>The reachability problem on <strong><em>trees</em></strong> (out-forests) can be solved effectively by <strong>interval labeling</strong>, which takes linear time and space for constructing the index, and provides constant time querying.</p>
+<p>It labels each node <span class="math inline">\(u\)</span> with a <strong><em>min-post</em></strong> range <span class="math inline">\(I_u = [s_u, e_u]\)</span>, where - <span class="math inline">\(s_u\)</span> denotes the rank of the node <span class="math inline">\(u\)</span> in a <em><u>post</u>-order traversal</em> of the tree, where the ranks are assumed to begin at 1, and all the children of a node are assumed to be ordered and fixed for that traversal.</p>
+<p>Note that the tree needs to be traversed in <em>depth-first search</em> (DFS) manner.</p>
+<ul>
+<li><span class="math inline">\(s_u\)</span> denotes the lowest rank for any node <span class="math inline">\(x\)</span>, or in other words <em><u>min</u>imum</em> of DFS number of a node in the subtree rooted at <span class="math inline">\(u\)</span> (i.e., including <span class="math inline">\(u\)</span>).</li>
+</ul>
+<p><strong>Min-post interval</strong> for a vertex (node) <span class="math inline">\(u\)</span> in a directed acyclic graph <span class="math inline">\(G\)</span>, denoted as <span class="math inline">\(I(u) \equiv I_u = [s_u, e_u]\)</span>, can be computed in the following way: - <span class="math inline">\(e_u\)</span> is defined as <span class="math inline">\(e_u = \pi(u) = \text{post}(u)\)</span>, i.e.&nbsp;post-order value (back traversal) in DFS traversal - <span class="math inline">\(s_u = \pi(u) = e_u\)</span> for leaf nodes, also known as sink nodes (no outcoming edges, out-degree 0),<br>
+otherwise <span class="math inline">\(s_u = \min\{s_x \colon x \in \text{out-neighbours}(s)\}\)</span> (out-neighbours are sometimes called children).</p>
+<p>Similarly, <strong>max-pre interval</strong> for a vertex (node) <span class="math inline">\(u\)</span> in a directed acyclic graph <span class="math inline">\(G\)</span>, denoted as <span class="math inline">\(\text{range}(u) \equiv \hat{I}_u = [\hat{\phi}(u), \phi(u)]\)</span>, can be computed in the following way: - <span class="math inline">\(\phi(u)\)</span> is defined as <span class="math inline">\(\phi(u) = \text{pre}(u)\)</span>, i.e.&nbsp;pre-order value (forward traversal) in DFS traversal - <span class="math inline">\(\hat{\phi}(u) = \phi(u)\)</span> for leaf nodes, also known as sink nodes (no outcoming edges, out-degree 0),<br>
+otherwise <span class="math inline">\(\hat{\phi}(u) = \max\{\hat{\phi}(x) \colon x \in \text{out-neighbours}(s)\}\)</span>.</p>
+<section id="min-post-interval-properties-for-trees" class="level3">
+<h3 class="anchored" data-anchor-id="min-post-interval-properties-for-trees">Min-post interval properties for trees</h3>
+<p>For out-forests (directed forests) the containment between intervals is equivalent to the reachability relationship between the nodes, since the post-order DFS traversal enters a node before all of its descendants, and leaves after having visited all of its descendants.</p>
+<p>In other words, <span class="math inline">\(u \leadsto v \iff I_v \subseteq I_u\)</span></p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>for trees it is enough to check that <span class="math inline">\(s_v \in I_u\)</span>, because that is equivalent to checking <span class="math inline">\(I_v \subseteq I_u\)</span>.</p>
+</div>
+</div>
+<p>This means that the reachability query for trees can be answered in constant time.</p>
+<p>Min-post and max-pre intervals for trees functions both as positive-cut and as negative-cut filter: - if <span class="math inline">\(I_v \subseteq I_u\)</span>, then <span class="math inline">\(u\)</span> can reach <span class="math inline">\(v\)</span> <em>(positive-cut filter)</em> - if <span class="math inline">\(u\)</span> can reach <span class="math inline">\(v\)</span>, then <span class="math inline">\(I_v \subseteq I_u\)</span> <em>(negative-cut filter)</em></p>
+</section>
+</section>
+<section id="min-post-intervals-in-directed-acyclic-graphs-dags" class="level2">
+<h2 class="anchored" data-anchor-id="min-post-intervals-in-directed-acyclic-graphs-dags"><em>min-post</em> intervals in directed acyclic graphs (DAGs)</h2>
+<p>The DFS <strong>post-order</strong> value (back traversal) induces topological sorting for a DAG.</p>
+<p>This means that if <span class="math inline">\(u\)</span> can reach <span class="math inline">\(v\)</span> (i.e.&nbsp;<span class="math inline">\(r(u,v)\)</span> is true, or <span class="math inline">\(u \leadsto v\)</span>), and <span class="math inline">\(u \neq v\)</span>, then <span class="math inline">\(\text{post}(u) &gt; \text{post}(v)\)</span>.<br>
+Conversely, if <span class="math inline">\(\text{post}(u) &lt; \text{post}(v)\)</span>, then <span class="math inline">\(u\)</span> cannot reach <span class="math inline">\(v\)</span> (<em>negative-cut</em> filter).</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/slides/git_commit_graph-spanning_forest_first_parent.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Commit graph with the spanning forest</figcaption>
+</figure>
+</div>
+<p>For example, as shown in the above image, <span class="math inline">\(n_{18} \leadsto n_{9}\)</span>, but <span class="math inline">\(n_{18} \not\leadsto n_{19}\)</span></p>
+<section id="min-post-interval-for-a-spanning-tree-positive-cut-filter" class="level3">
+<h3 class="anchored" data-anchor-id="min-post-interval-for-a-spanning-tree-positive-cut-filter"><em>min-post</em> interval for a spanning tree <em>(positive-cut filter)</em></h3>
+<p>For a directed acyclic graph <span class="math inline">\(G\)</span>, we define a <strong>tree cover</strong> (or <strong>forest cover</strong>) of <span class="math inline">\(G\)</span>, denoted as <span class="math inline">\(T(G) = (V_T, E_T)\)</span>, as a directed spanning tree of <span class="math inline">\(G\)</span>.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Tip
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>if we want to have a tree cover rather than a forest,</p>
+</div>
+</div>
+<blockquote class="blockquote">
+<p>we can augment graph <span class="math inline">\(G\)</span> by introducing an artificial root node <span class="math inline">\(r\)</span> that is connected to every node with no incoming edge: <span class="math display">\[ G' := (V \cup \{r\}, E \cup \{(r,v) \colon v \in V, \text{indegree}(v) = 0\}) \]</span> Note that this modification has no effect on the reachability relation among the existing nodes of <span class="math inline">\(G\)</span>.</p>
+</blockquote>
+<p>We define <strong>min-post tree interval</strong> as following</p>
+<p><span class="math display">\[ I_v = \{\pi(w) \colon w \in V_{T_v}\}
+   = \left[ \min_{w \in V_{T_v}} \pi(w), \max_{w \in V_{T_v}} \pi(w) \right]
+   = \left[ \min_{w \in V_{T_v}} \pi(w), \pi(v) \right]\]</span></p>
+<p>Here <span class="math inline">\(T_v = (V_{T_v}, E_{T_v})\)</span> denote the subtree of <span class="math inline">\(T(G)\)</span> rooted at node <span class="math inline">\(v\)</span>.</p>
+<p>The spanning forest, or tree cover, or out-forest <span class="math inline">\(T(G)\)</span> of directed acyclic graph <span class="math inline">\(G\)</span> has the following properties: - if there exists a path from <span class="math inline">\(u\)</span> to <span class="math inline">\(v\)</span> in the spanning tree <span class="math inline">\(T(G)\)</span>, then <span class="math inline">\(u\)</span> can reach <span class="math inline">\(v\)</span> in the full graph <span class="math inline">\(G\)</span> - but the path from <span class="math inline">\(u\)</span> to <span class="math inline">\(v\)</span> could require going through edges outside the spanning tree <span class="math inline">\(T(G)\)</span></p>
+<p>The <strong><em>min-post tree interval labels</em></strong> have therefore the following properties: - path from <span class="math inline">\(u\)</span> to <span class="math inline">\(v\)</span> in the spanning tree <span class="math inline">\(T(G)\)</span> exists if and only if <span class="math inline">\(I_v \subseteq I_u\)</span> (or <span class="math inline">\(\pi(v) \in I_u\)</span>) - if <span class="math inline">\(I_v \subseteq I_u\)</span>, then <span class="math inline">\(u \leadsto v\)</span> (<span class="math inline">\(u\)</span> can reach <span class="math inline">\(v\)</span>, also in the full graph <span class="math inline">\(G\)</span>)</p>
+<p>It can be therefore used as <em>positive-cut filter</em>.</p>
+<p>Example:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/colab/small_DAG_spanning_tree_min-post.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Small DAG with the spanning out-forest overlay and min-post intervals</figcaption>
+</figure>
+</div>
+<p>In the graph and its spanning tree shown in the above figure we have: - <span class="math inline">\([3,3] \subseteq [1,5]\)</span> then <span class="math inline">\(a \leadsto h\)</span>, - <span class="math inline">\([3,3] \not\subseteq [7,9]\)</span>, but <span class="math inline">\(b \leadsto h\)</span> (via out-of-tree edge)</p>
+<p>Such interval is called <strong>tree interval</strong> or <strong>exact interval</strong> and denoted <span class="math inline">\(I_T(u)\)</span> in the FERRARI paper,<br>
+and the corresponding max-pre interval as a range is called <strong>full interval</strong> (because every <span class="math inline">\(v\)</span> such that <span class="math inline">\(\phi(v) \in I_T(u)\)</span> is reachable from <span class="math inline">\(v\)</span>) in the PReaCH paper</p>
+</section>
+<section id="min-post-interval-for-a-dag-negative-cut-filter" class="level3">
+<h3 class="anchored" data-anchor-id="min-post-interval-for-a-dag-negative-cut-filter"><em>min-post</em> interval for a DAG <em>(negative-cut filter)</em></h3>
+<p>While above technique (min-post intervals) can be used to easily answer reachability queries on trees, the case of general DAGs is much more challenging.</p>
+<p>The reason is that, in general, the reachable set <span class="math inline">\(\mathcal{R}(v)\)</span> of a vertex <span class="math inline">\(v\)</span> in the DAG (i.e.&nbsp;the set of vertices reachable from <span class="math inline">\(v\)</span>: <span class="math inline">\(\mathcal{R}(v) = \{u \in V\colon v \leadsto u\}\)</span>) is only partly represented by the interval <span class="math inline">\(I_T(v)\)</span>, as the tree interval only accounts for reachability relationships that are preserved in <span class="math inline">\(T\)</span>. Vertices that can only be reached from a node <span class="math inline">\(v\)</span> by traversing one or more non-tree edges have to be handled seperately: instead of merely storing the tree intervals <span class="math inline">\(I_T(v)\)</span>, every node <span class="math inline">\(v\)</span> is now assigned a set of intervals, denoted by <span class="math inline">\(\mathcal{I}(v)\)</span>. The purpose of this so-called <strong>reachable interval set</strong> is to capture the complete reachability information of a node.</p>
+<p>Let’s define the <strong>approximate graph interval</strong> as a single interval <span class="math inline">\(\tilde{I}_G(v) = [\tilde{s}_u, \tilde{e}_u]\)</span> approximating the reachable set <span class="math inline">\(\mathcal{R}(u)\)</span> of a vertex <span class="math inline">\(u\)</span> in the DAG from the above (i.e.&nbsp;<span class="math inline">\(\mathcal{R}(u) \subseteq \tilde{I}_G(u)\)</span>) in the following way:</p>
+<p><span class="math display">\[ \tilde{I}_G(v)
+   = \left[ \min_{w \in \mathcal{R}(v)} \pi(w), \max_{w \in \mathcal{R}_v} \pi(w) \right]
+   = \left[ \min_{w \in V} \pi(w), \pi(v) \right]\]</span></p>
+<p>The second part of the above equation is true for DFS traversal; the fact that the end of interval is simply post-traversal value <span class="math inline">\(\pi(v)\)</span> was mentioned earlier.</p>
+<p>This <strong><em>min-post approximate graph interval</em></strong> has the following properties: - if <span class="math inline">\(u\)</span> can reach <span class="math inline">\(v\)</span> (denoted as <span class="math inline">\(u \leadsto v\)</span>), then <span class="math inline">\(\tilde{I}_G(v) \subseteq \tilde{I}_G(u)\)</span> - this means that if <span class="math inline">\(\tilde{I}_G(v) \not\subseteq \tilde{I}_G(u)\)</span>, then <span class="math inline">\(u\)</span> cannot reach <span class="math inline">\(v\)</span> <em>(negative-cut filter)</em></p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/grail/GRAIL_vldb2010-fig2ab-interval_labeling_tree_and_DAG.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Interval Labeling: Tree (a) and DAG: Single (b)</figcaption>
+</figure>
+</div>
+<p>For example, part (a) of the figure above (taken from GRAIL paper) shows the <em>interval labeling on a tree</em>, assuming that the children are ordered from left to right. It is easy to see that reachability can be answered by interval containment. For example, <span class="math inline">\(1 \leadsto 9\)</span>, since <span class="math inline">\(I_9 = [2, 2] \subset [1, 6] = L_1\)</span>, but <span class="math inline">\(2 \not\leadsto 7\)</span>, since <span class="math inline">\(I_7 = [1, 3] \not\subseteq [7, 9] = L_2\)</span>.</p>
+<p>For example, part (b) of the figure above shows an <em>interval labeling on a DAG</em>, assuming a left to right ordering of the children. As one can see, interval containment of nodes in a DAG is not exactly equivalent to reachability. For example, <span class="math inline">\(5 \not\leadsto 4\)</span>, but <span class="math inline">\(\tilde{I}_4 = [1, 5] \subseteq [1, 8] = \tilde{I}_5\)</span>. In other words, <span class="math inline">\(\tilde{U}_v \subseteq \tilde{I}_u\)</span> does not imply that <span class="math inline">\(u \leadsto v\)</span>. On the other hand, one can show that <span class="math inline">\(\tilde{I}_v \not\subseteq \tilde{I}_u \implies u \not\leadsto v\)</span>.</p>
+</section>
+</section>
+<section id="extending-min-post-intervals-for-graphs" class="level2">
+<h2 class="anchored" data-anchor-id="extending-min-post-intervals-for-graphs">Extending <em>min-post</em> intervals for graphs</h2>
+<p>This section describes various extensions to the <em>min-post</em> intervals (DFS numbering) going beyond those negative-cut and positive-cut filters described above.</p>
+<section id="multiple-intervals-labelling-grail-todo" class="level3">
+<h3 class="anchored" data-anchor-id="multiple-intervals-labelling-grail-todo">Multiple intervals labelling: GRAIL (TODO)</h3>
+</section>
+<section id="extending-interval-labelling-preach" class="level3">
+<h3 class="anchored" data-anchor-id="extending-interval-labelling-preach">Extending interval labelling: PReaCH</h3>
+<p>The PReaCH paper extends min-post intervals labelling with approach slightly different from GRAIL, where instead of using additional DFS searches, additional extra labels are used.</p>
+<p><strong>NOTE:</strong> the PReaCH paper uses max-pre interval labelling instead of min-post one, but one can be translated into the other.</p>
+<section id="original-extension-of-max-pre-intervals-section-3.3-of-preach" class="level4">
+<h4 class="anchored" data-anchor-id="original-extension-of-max-pre-intervals-section-3.3-of-preach">Original extension of max-pre intervals (Section 3.3 of PReaCH)</h4>
+<p><strong>Section 3.3 “<em>Pruning Based on DFS Numbering</em>” in the PReaCH paper.</strong></p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/preach/PReaCH_arXiv-fig_3-full_and_empty_intervals_derived_from_DFS_numbering.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Full and empty intervals derived from a DFS ordering</figcaption>
+</figure>
+</div>
+<p>Let <span class="math inline">\(\phi(v)\)</span> denote the pre-visit DFS number of node <span class="math inline">\(v\)</span> and <span class="math inline">\(\hat{\phi}(v)\)</span> the largest DFS number of a node in the subtree of the DFS tree rooted at <span class="math inline">\(v\)</span>. The properties of DFS ensure that the nodes in <span class="math inline">\(\text{range}(v) := \phi(v)..\hat{\phi}(v)\)</span> are all reachable from <span class="math inline">\(v\)</span> (they form the subtree of the DFS tree which is rooted at <span class="math inline">\(v\)</span>) and that no nodes with DFS number exceeding <span class="math inline">\(\hat{\phi}(v)\)</span> is reachable from <span class="math inline">\(v\)</span>.</p>
+<p>Let <span class="math inline">\(u \to v\)</span> denote that <span class="math inline">\(r(u,v)\)</span> is true, and <span class="math inline">\(u \nrightarrow v\)</span> that <span class="math inline">\(r(u,v)\)</span> is false.<br>
+(We would use <span class="math inline">\(u \leadsto v\)</span>/<span class="math inline">\(u \rightsquigarrow v\)</span>, but <span class="math inline">\(u \not\leadsto v\)</span> is broken, and there is no <span class="math inline">\(\nrightsquigarrow\)</span>).</p>
+<ul>
+<li><span class="math inline">\(\forall v,t \in V \colon\ t \in \text{range}(v) \implies v \to t\)</span><br>
+<em>(positive-cut)</em></li>
+<li><span class="math inline">\(\forall v,t \in V \colon\ \phi(t) &gt; \hat{\phi}(v) \implies v \nrightarrow t\)</span><br>
+<em>(negative-cut)</em></li>
+</ul>
+<p>Let’s define node <span class="math inline">\(w = p_{\text{tree}}(v)\)</span> as the node that has <span class="math inline">\(v \to w\)</span> and <span class="math inline">\(w \notin \text{range}(v)\)</span> which maximizes <span class="math inline">\(\lvert\text{range}(w)\rvert\)</span>. Then, if <span class="math inline">\(p_{\text{tree}}(v)\)</span> exists</p>
+<ul>
+<li><span class="math inline">\(\forall v,t \in V \colon\ p_{\text{tree}}(v) \neq \bot \land t \in \text{range}(p_{\text{tree}}(v)) \implies v \to t\)</span><br>
+<em>(positive-cut)</em></li>
+</ul>
+<p>For any <span class="math inline">\(v \in V\)</span>, let <span class="math inline">\(\phi_{\text{min}}(v)\)</span> denote the smallest DFS number of a node reachable from <span class="math inline">\(v\)</span> (including <span class="math inline">\(v\)</span>). Then</p>
+<ul>
+<li><span class="math inline">\(\forall v,t \in V \colon\ \phi(t) &lt; \phi_{\text{min}}(v) \implies v \nrightarrow t\)</span><br>
+<em>(negative-cut)</em></li>
+</ul>
+<p>We can also define <span class="math inline">\(\phi_{\text{gap}}(v)\)</span> in such way that</p>
+<ul>
+<li><span class="math inline">\(\forall v,t \in V \colon\ \phi_{\text{gap}}(v) &lt; \phi(t) &lt; \phi(v) \implies v \nrightarrow t\)</span><br>
+<em>(negative-cut)</em></li>
+</ul>
+<p>All those values: <span class="math inline">\(\phi(v), \hat{\phi}(v), p_{\text{tree}}(v), \phi_{\text{min}}(v), \phi_{\text{gap}}(v)\)</span> can be done while computing the DFS numbering.</p>
+<p><strong>On choosing the DFS spanning-tree from PReaCH paper</strong></p>
+<p>There are many ways to define a DFS ordering: We are free to choose the order in which we scan the nodes for starting recursive exploration and we can choose the order in which we inspect edges leaving a node being explored.</p>
+<p>One heuristics that seems to be useful: Make sure that most nodes are in a small number of trees because this leads to large positive intervals. It therefore makes sense to only uses sources of the graph as tree roots.</p>
+<p>In addition, one can order the sources by the number of nodes reached from them during the search for topological levels.</p>
+</section>
+<section id="translating-preach-extension-to-min-post-intervals" class="level4">
+<h4 class="anchored" data-anchor-id="translating-preach-extension-to-min-post-intervals">Translating PReaCH extension to min-post intervals</h4>
+<!-- https://www.overleaf.com/project/5fd15159e5a50909877b2ddf -->
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/full_and_empty_intervals_derived_from_min-post_DFS_numbering.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Full and empty intervals derived from a post-visit DFS ordering</figcaption>
+</figure>
+</div>
+<p>Let <span class="math inline">\(\pi(v)\)</span> denote the post-visit DFS number of node <span class="math inline">\(v\)</span> and <span class="math inline">\(\breve{\pi}(v)\)</span> the smallest post-visit DFS number of a node in the subtree of the DFS tree rooted at <span class="math inline">\(v\)</span>. The properties of DFS ensure that the nodes in <span class="math inline">\(I_T(v) := \breve{\pi}(v)..\pi(v) = [\breve{\pi}(v),\pi(v)]\)</span> are all reachable from <span class="math inline">\(v\)</span> (they form the subtree of the DFS tree which is rooted at <span class="math inline">\(v\)</span>) and that no nodes with DFS number exceeding <span class="math inline">\(\pi(v)\)</span> is reachable from <span class="math inline">\(v\)</span>.</p>
+<p>Let <span class="math inline">\(u \to v\)</span> denote that <span class="math inline">\(r(u,v)\)</span> is true, and <span class="math inline">\(u \nrightarrow v\)</span> that <span class="math inline">\(r(u,v)\)</span> is false.</p>
+<ul>
+<li><span class="math inline">\(\forall v,t \in V \colon\ t \in I_T(v) \implies v \to t\)</span><br>
+<em>(positive-cut)</em></li>
+<li><span class="math inline">\(\forall v,t \in V \colon\ \pi(t) &gt; \pi(v) \implies v \nrightarrow t\)</span><br>
+<em>(negative-cut)</em></li>
+</ul>
+<p>Let’s define node <span class="math inline">\(w = p_{\text{tree}}(v) = p_{\text{t}}(v)\)</span> as the node that has <span class="math inline">\(v \to w\)</span> and <span class="math inline">\(w \notin I_T(v)\)</span> which maximizes <span class="math inline">\(\lvert I_T(w)\rvert\)</span>.<br>
+Then, if <span class="math inline">\(p_{\text{tree}}(v)\)</span> exists (which we denote as <span class="math inline">\(p_{\text{tree}}(v) \neq \bot\)</span>)</p>
+<ul>
+<li><span class="math inline">\(\forall v,t \in V \colon\ p_{\text{tree}}(v) \neq \bot \land t \in I_T(p_{\text{tree}}(v)) \implies v \to t\)</span><br>
+<em>(positive-cut)</em></li>
+</ul>
+<p>For any <span class="math inline">\(v \in V\)</span>, let <span class="math inline">\(\pi_{\text{min}}(v)\)</span> denote the smallest post-visit DFS number of a node reachable from <span class="math inline">\(v\)</span> (including <span class="math inline">\(v\)</span>) in the graph.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>with this notation we can say that <span class="math inline">\(\tilde{I}_G(v) = [\pi_{\text{min}}(v), \pi(v)]\)</span>.</p>
+</div>
+</div>
+<p>Then</p>
+<ul>
+<li><span class="math inline">\(\forall v,t \in V \colon\ \pi(t) &lt; \pi_{\text{min}}(v) \implies v \nrightarrow t\)</span><br>
+<em>(negative-cut)</em></li>
+</ul>
+<p>We can also define <span class="math inline">\(\pi_{\text{gap}}(v)\)</span> in such way that</p>
+<ul>
+<li><span class="math inline">\(\forall v,t \in V \colon\ \pi_{\text{gap}}(v) &lt; \pi(t) &lt; \pi(v) \implies v \nrightarrow t\)</span><br>
+<em>(negative-cut)</em></li>
+</ul>
+<p>All those values: <span class="math inline">\(\pi(v), \breve{\pi}(v), p_{\text{tree}}(v), \pi_{\text{min}}(v), \pi_{\text{gap}}(v)\)</span> can be done while computing the DFS numbering.</p>
+</section>
+</section>
+<section id="extending-interval-labelling-ferrari-todo" class="level3">
+<h3 class="anchored" data-anchor-id="extending-interval-labelling-ferrari-todo">Extending interval labelling: FERRARI (TODO)</h3>
+</section>
+</section>
+<section id="visualizing-dfs-intervals-on-example-graphs" class="level2">
+<h2 class="anchored" data-anchor-id="visualizing-dfs-intervals-on-example-graphs">Visualizing DFS intervals on example graphs</h2>
+<p>TODO</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># this is needed for example (small) graphs</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> git_commit_graph_ext.example_graphs <span class="im">as</span> graphs</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># this is needed only for demonstrations</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="examples-of-spanning-trees-and-min-post-tree-intervals-labelling" class="level3">
+<h3 class="anchored" data-anchor-id="examples-of-spanning-trees-and-min-post-tree-intervals-labelling">Examples of spanning trees and min-post tree intervals labelling</h3>
+<p>Draw a small DAG (from FELINE paper) and its spanning tree, like on Figure 8 of the FELINE paper, together with its <em>min-post</em> tree intervals.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">#@title Draw a small DAG and its spanning-tree, as in Figure 8</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> copy <span class="im">import</span> deepcopy</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>plt.axis(<span class="st">'off'</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Small DAG with the spanning tree overlay and min-post intervals'</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>sd<span class="op">=</span>graphs.small_DAG_FELINE()</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>sd.tree<span class="op">=</span>{</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">'a'</span>:(<span class="dv">2</span>,<span class="dv">3</span>),<span class="st">'b'</span>:(<span class="fl">4.5</span>,<span class="dv">3</span>),</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">'c'</span>:(<span class="dv">1</span>,<span class="dv">2</span>),<span class="st">'d'</span>:(<span class="dv">2</span>,<span class="dv">2</span>),<span class="st">'e'</span>:(<span class="dv">3</span>,<span class="dv">2</span>),<span class="st">'f'</span>:(<span class="dv">4</span>,<span class="dv">2</span>),<span class="st">'g'</span>:(<span class="dv">5</span>,<span class="dv">2</span>),</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">'h'</span>:(<span class="dv">3</span>,<span class="dv">1</span>)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx(sd,</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>                 pos<span class="op">=</span>sd.tree,</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>                 node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">8.0</span>,</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>                 edge_color<span class="op">=</span><span class="st">'#aaaaaa'</span>,node_color<span class="op">=</span><span class="st">'y'</span>)</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx_edges(sd,</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>                       pos<span class="op">=</span>sd.tree,</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>                       edgelist<span class="op">=</span>[</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>                            (<span class="st">'a'</span>,<span class="st">'c'</span>),(<span class="st">'a'</span>,<span class="st">'d'</span>),(<span class="st">'a'</span>,<span class="st">'e'</span>),</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>                            (<span class="st">'e'</span>,<span class="st">'h'</span>),</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>                            (<span class="st">'b'</span>,<span class="st">'f'</span>),(<span class="st">'b'</span>,<span class="st">'g'</span>)</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>                        ],</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>                        node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">2.0</span>,</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>                        arrowstyle<span class="op">=</span><span class="st">'-&gt;'</span>)</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>sd.lpos<span class="op">=</span>deepcopy(sd.tree)</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> v <span class="kw">in</span> <span class="bu">list</span>(<span class="st">'abh'</span>):</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>  sd.lpos[v] <span class="op">=</span> (sd.lpos[v][<span class="dv">0</span>]<span class="op">+</span><span class="fl">0.40</span>,sd.lpos[v][<span class="dv">1</span>])</span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> v <span class="kw">in</span> <span class="bu">list</span>(<span class="st">'cdfg'</span>):</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>  sd.lpos[v] <span class="op">=</span> (sd.lpos[v][<span class="dv">0</span>]<span class="op">+</span><span class="fl">0.05</span>,sd.lpos[v][<span class="dv">1</span>]<span class="op">-</span><span class="fl">0.2</span>)</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> v <span class="kw">in</span> <span class="bu">list</span>(<span class="st">'e'</span>):</span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>  sd.lpos[v] <span class="op">=</span> (sd.lpos[v][<span class="dv">0</span>]<span class="op">+</span><span class="fl">0.35</span>,sd.lpos[v][<span class="dv">1</span>]<span class="op">+</span><span class="fl">0.1</span>)</span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>sd.mpi<span class="op">=</span>{</span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>    <span class="st">'a'</span>:(<span class="dv">1</span>,<span class="dv">5</span>),<span class="st">'b'</span>:(<span class="dv">7</span>,<span class="dv">9</span>),</span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>    <span class="st">'c'</span>:(<span class="dv">1</span>,<span class="dv">1</span>),<span class="st">'d'</span>:(<span class="dv">2</span>,<span class="dv">2</span>),<span class="st">'e'</span>:(<span class="dv">3</span>,<span class="dv">4</span>),<span class="st">'f'</span>:(<span class="dv">7</span>,<span class="dv">7</span>),<span class="st">'g'</span>:(<span class="dv">8</span>,<span class="dv">8</span>),</span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>    <span class="st">'h'</span>:(<span class="dv">3</span>,<span class="dv">3</span>),</span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>sd.mpi_labels<span class="op">=</span>{</span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>  v:(<span class="st">'[</span><span class="sc">%d</span><span class="st">,</span><span class="sc">%d</span><span class="st">]'</span><span class="op">%</span>(i[<span class="dv">0</span>],i[<span class="dv">1</span>]))</span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (v,i) <span class="kw">in</span> sd.mpi.items()</span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx_labels(sd,</span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>                        pos<span class="op">=</span>sd.lpos,</span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>                        labels<span class="op">=</span>sd.mpi_labels)</span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>plt.draw()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<p><img src="07_interval_labels_files/figure-html/cell-5-output-1.png" class="img-fluid"></p>
+</div>
+</div>
+<p>The above figure shows <em>Min-post indexing for a spanning tree</em> extracted from the small DAG of Figure 2 in the FELINE paper. Each vertex is labeled with its <em>min-post</em> interval. Original edges of the DAG are marked in light gray.</p>
+<p>For instance, consider the vertex <span class="math inline">\(h\)</span> of above figure. We can conclude that the query <span class="math inline">\(r(a,h)\)</span> will return true (<span class="math inline">\(a \leadsto h\)</span>), without search, because <span class="math inline">\([3,3] \subseteq [1,5]\)</span>. However, we can say nothing about the query <span class="math inline">\(r(b,h)\)</span>, because there is no tree edge connecting the two vertices.</p>
+</section>
+<section id="post-traversal-index-vs-backward-topological-level-drawing-of-example-graphs" class="level3">
+<h3 class="anchored" data-anchor-id="post-traversal-index-vs-backward-topological-level-drawing-of-example-graphs">Post-traversal index vs backward topological level drawing of example graphs</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> matplotlib.lines <span class="im">import</span> Line2D</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">#plt.axis('off')</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Small DAG with the spanning tree overlay and min-post intervals</span><span class="ch">\n</span><span class="st">'</span><span class="op">+</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>          <span class="st">'drawn using spanning tree position and levels'</span>)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>sd<span class="op">=</span>graphs.small_DAG_FELINE()</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>sd.lvl <span class="op">=</span> {</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">'h'</span>: <span class="dv">0</span>, <span class="st">'g'</span>: <span class="dv">0</span>, <span class="st">'d'</span>: <span class="dv">0</span>,</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">'c'</span>: <span class="dv">1</span>, <span class="st">'e'</span>: <span class="dv">1</span>, <span class="st">'f'</span>: <span class="dv">1</span>,</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">'a'</span>: <span class="dv">2</span>, <span class="st">'b'</span>: <span class="dv">2</span>,</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>sd.mpi<span class="op">=</span>{</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">'a'</span>:(<span class="dv">1</span>,<span class="dv">5</span>),<span class="st">'b'</span>:(<span class="dv">7</span>,<span class="dv">9</span>),</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">'c'</span>:(<span class="dv">1</span>,<span class="dv">1</span>),<span class="st">'d'</span>:(<span class="dv">2</span>,<span class="dv">2</span>),<span class="st">'e'</span>:(<span class="dv">3</span>,<span class="dv">4</span>),<span class="st">'f'</span>:(<span class="dv">7</span>,<span class="dv">7</span>),<span class="st">'g'</span>:(<span class="dv">8</span>,<span class="dv">8</span>),</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">'h'</span>:(<span class="dv">3</span>,<span class="dv">3</span>),</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>sd.mpi_labels<span class="op">=</span>{</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>  v:(<span class="st">'[</span><span class="sc">%d</span><span class="st">,</span><span class="sc">%d</span><span class="st">]'</span><span class="op">%</span>(i[<span class="dv">0</span>],i[<span class="dv">1</span>]))</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (v,i) <span class="kw">in</span> sd.mpi.items()</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>sd.mpilvl<span class="op">=</span>{</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>  v: (sd.mpi[v][<span class="dv">1</span>],sd.lvl[v]) <span class="cf">for</span> v <span class="kw">in</span> sd</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">'spanning-tree post-order $\pi(v)$'</span>)</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'node level $L(v)$'</span>)</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>ax<span class="op">=</span>plt.gca()</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> v <span class="kw">in</span> sd:</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> sd.mpi[v][<span class="dv">0</span>] <span class="op">==</span> sd.mpi[v][<span class="dv">1</span>]:</span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>    <span class="cf">continue</span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>  ax.add_line(Line2D([sd.mpi[v][<span class="dv">0</span>],sd.mpi[v][<span class="dv">1</span>]],</span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>                     [sd.lvl[v],sd.lvl[v]],</span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>                     lw<span class="op">=</span><span class="fl">5.</span>, alpha<span class="op">=</span><span class="fl">0.3</span>))</span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx(sd,</span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>                 pos<span class="op">=</span>sd.mpilvl,</span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>                 node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">8.0</span>,</span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>                 edge_color<span class="op">=</span><span class="st">'#aaaaaa'</span>,node_color<span class="op">=</span><span class="st">'y'</span>)</span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>edges<span class="op">=</span>nx.draw_networkx_edges(sd,</span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>                             pos<span class="op">=</span>sd.mpilvl,</span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>                             edgelist<span class="op">=</span>[</span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>                               (<span class="st">'a'</span>,<span class="st">'c'</span>),(<span class="st">'a'</span>,<span class="st">'d'</span>),(<span class="st">'a'</span>,<span class="st">'e'</span>),</span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>                               (<span class="st">'e'</span>,<span class="st">'h'</span>),</span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>                               (<span class="st">'b'</span>,<span class="st">'f'</span>),(<span class="st">'b'</span>,<span class="st">'g'</span>)</span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>                             ],</span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a>                             node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">2.0</span>,</span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a>                             arrowstyle<span class="op">=</span><span class="st">'-&gt;'</span>)</span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a>labels<span class="op">=</span>nx.draw_networkx_labels(sd,</span>
+<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a>                               pos<span class="op">=</span>{u:(x<span class="op">+</span><span class="fl">0.55</span>,y<span class="op">-</span><span class="fl">0.08</span>) <span class="cf">for</span> (u,(x,y)) <span class="kw">in</span> sd.mpilvl.items()},</span>
+<span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a>                               labels<span class="op">=</span>sd.mpi_labels)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<p><img src="07_interval_labels_files/figure-html/cell-6-output-1.png" class="img-fluid"></p>
+</div>
+</div>
+<p>Commit graph with the spanning forest and min-post intervals: - commit graph from the Stolee blog post<br>
+In the drawing of this graph below arrows (directed edges) point from right to left.<br>
+<img src="images/stolee.dev/commit-graph-example.png" class="img-fluid" alt="An example Git commit graph"></p>
+<ul>
+<li><p>the same commit graph, but with the spanning forest (with the tree cover)<br>
+the vertices / nodes in this image are post-visit order, denoted <span class="math inline">\(\text{post}(v) = \pi(v)\)</span><br>
+numbered dashed lines denote the backward topological level (sink-based) of the vertex / node<br>
+<img src="images/slides/git_commit_graph-spanning_forest_first_parent.png" class="img-fluid" alt="Commit graph with the spanning forest"></p></li>
+<li><p>The same graph, just drawn differently (post-visit order vs topological level)<br>
+with the spanning forrest, post-visit order as label, and min-post tree interval marked<br>
+<img src="images/slides/git_commit_graph-min-post_intervals.png" class="img-fluid" alt="Commit graph drawn with post-visit order vs level"></p></li>
+</ul>
+</section>
+</section>
+<section id="computing-dfs-intervals-labelling" class="level2">
+<h2 class="anchored" data-anchor-id="computing-dfs-intervals-labelling">Computing DFS intervals labelling</h2>
+<p>Here there would be all code that automatically computes the spanning tree (or rather the spanning forest), also known as tree cover of a graph, and all the DFS numbering based labels.</p>
+<section id="computing-the-spanning-tree" class="level3">
+<h3 class="anchored" data-anchor-id="computing-the-spanning-tree">Computing the spanning tree</h3>
+<pre><code>/opt/hostedtoolcache/Python/3.9.16/x64/lib/python3.9/site-packages/fastcore/docscrape.py:225: UserWarning: Unknown section Examples
+  else: warn(msg)
+/opt/hostedtoolcache/Python/3.9.16/x64/lib/python3.9/site-packages/fastcore/docscrape.py:225: UserWarning: Unknown section Notes
+  else: warn(msg)</code></pre>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/labelling/dfs_intervals.py#L11" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="find_dfs_spanning" class="level3">
+<h3 class="anchored" data-anchor-id="find_dfs_spanning">find_dfs_spanning</h3>
+<blockquote class="blockquote">
+<pre><code> find_dfs_spanning (G)</code></pre>
+</blockquote>
+<p>Find edges of the DFS spanning tree for graph G</p>
+<p>This is used to visualize the spanning tree (spanning forest, tree cover) in example small graphs. This function is also used to compute DFS intervals, among others in <code>find_dfs_intervals()</code></p>
+<table class="table">
+<colgroup>
+<col style="width: 9%">
+<col style="width: 38%">
+<col style="width: 52%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th><strong>Type</strong></th>
+<th><strong>Details</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>G</td>
+<td>NetworkX graph</td>
+<td>Graph to find spanning-tree in.</td>
+</tr>
+<tr class="even">
+<td><strong>Returns</strong></td>
+<td><strong>list</strong></td>
+<td><strong>A list of edges in the depth-first-search.</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Simple test that it works correctly for a very simple linear graph</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>nx.draw(nx.path_graph(<span class="dv">5</span>),with_labels<span class="op">=</span><span class="va">True</span>,node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">2.0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<p><img src="07_interval_labels_files/figure-html/cell-8-output-1.png" class="img-fluid"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(find_dfs_spanning(nx.path_graph(<span class="dv">5</span>)))</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> find_dfs_spanning(nx.path_graph(<span class="dv">5</span>)) <span class="op">==</span> [(<span class="dv">0</span>, <span class="dv">1</span>), (<span class="dv">1</span>, <span class="dv">2</span>), (<span class="dv">2</span>, <span class="dv">3</span>), (<span class="dv">3</span>, <span class="dv">4</span>)]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[(0, 1), (1, 2), (2, 3), (3, 4)]</code></pre>
+</div>
+</div>
+<p>Visualize a spanning tree in undirected graph</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>G5<span class="op">=</span>nx.path_graph(<span class="dv">5</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>G5.pos<span class="op">=</span>{v:(v,<span class="dv">0</span>) <span class="cf">for</span> v <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">5</span>)}</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx(G5,</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>                 pos<span class="op">=</span>G5.pos,</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>                 node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">8.0</span>,</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>                 edge_color<span class="op">=</span><span class="st">'#aaaaaa'</span>)</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx_edges(G5,</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>                       pos<span class="op">=</span>G5.pos,</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>                       edgelist<span class="op">=</span>find_dfs_spanning(G5),</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>                       node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">2.0</span>,</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>                       arrowstyle<span class="op">=</span><span class="st">'-&gt;'</span>)</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>plt.draw()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<p><img src="07_interval_labels_files/figure-html/cell-10-output-1.png" class="img-fluid"></p>
+</div>
+</div>
+<p>Draw a small DAG from the FELINE paper, and visualize automatically generated spanning tree (or rather one of the spanning trees)</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co">#@title Draw a small DAG and its find_dfs_spanning</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="co"># get graph</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>sd<span class="op">=</span>graphs.small_DAG_FELINE()</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co">: move setting original positions to `small_DAG_FELINE()` to avoid repetitions</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>sd.tree<span class="op">=</span>{</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">'a'</span>:(<span class="dv">2</span>,<span class="dv">3</span>),<span class="st">'b'</span>:(<span class="fl">4.5</span>,<span class="dv">3</span>),</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">'c'</span>:(<span class="dv">1</span>,<span class="dv">2</span>),<span class="st">'d'</span>:(<span class="dv">2</span>,<span class="dv">2</span>),<span class="st">'e'</span>:(<span class="dv">3</span>,<span class="dv">2</span>),<span class="st">'f'</span>:(<span class="dv">4</span>,<span class="dv">2</span>),<span class="st">'g'</span>:(<span class="dv">5</span>,<span class="dv">2</span>),</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">'h'</span>:(<span class="dv">3</span>,<span class="dv">1</span>)</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a><span class="co"># configure plot</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>plt.axis(<span class="st">'off'</span>)</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Small DAG with the spanning tree overlay '</span><span class="op">+</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>          <span class="st">'(find_dfs_spanning)'</span>)</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a><span class="co"># draw graph and its spanning tree</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx(sd,</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>                 pos<span class="op">=</span>sd.tree,</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>                 node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">8.0</span>,</span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>                 edge_color<span class="op">=</span><span class="st">'#aaaaaa'</span>,node_color<span class="op">=</span><span class="st">'y'</span>)</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx_edges(sd,</span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>                       pos<span class="op">=</span>sd.tree,</span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>                       edgelist<span class="op">=</span>find_dfs_spanning(sd),</span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>                       node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">2.0</span>,</span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>                       arrowstyle<span class="op">=</span><span class="st">'-&gt;'</span>)</span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>plt.draw()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<p><img src="07_interval_labels_files/figure-html/cell-11-output-1.png" class="img-fluid"></p>
+</div>
+</div>
+<p>Draw a crown DAG, known as <span class="math inline">\(S_0^3\)</span> graph, used in FELINE paper as simple example of irreductible false-positive for FELINE labels</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># get graph</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>cd<span class="op">=</span>graphs.crown_DAG()</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>cd.pos<span class="op">=</span>{<span class="dv">1</span>:(<span class="dv">1</span>,<span class="dv">4</span>),<span class="dv">2</span>:(<span class="dv">3</span>,<span class="dv">6</span>),<span class="st">'u'</span>:(<span class="dv">2</span>,<span class="dv">2</span>),<span class="dv">3</span>:(<span class="dv">4</span>,<span class="dv">1</span>),<span class="dv">4</span>:(<span class="dv">6</span>,<span class="dv">3</span>),<span class="st">'v'</span>:(<span class="dv">5</span>,<span class="dv">5</span>)}</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="co"># configure plot</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>plt.axis(<span class="st">'off'</span>)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Crown DAG $S_0^3$ with the spanning tree overlay '</span><span class="op">+</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>          <span class="st">'(find_dfs_spanning)'</span>)</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="co"># draw graph and its spanning tree</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx(cd,</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>                 pos<span class="op">=</span>cd.pos,</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>                 node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">8.0</span>,</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>                 edge_color<span class="op">=</span><span class="st">'#aaaaaa'</span>)</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx_edges(cd,</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>                       pos<span class="op">=</span>cd.pos,</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>                       edgelist<span class="op">=</span>find_dfs_spanning(cd),</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>                       node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">2.0</span>,</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>                       arrowstyle<span class="op">=</span><span class="st">'-&gt;'</span>)</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>plt.draw()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<p><img src="07_interval_labels_files/figure-html/cell-12-output-1.png" class="img-fluid"></p>
+</div>
+</div>
+<p>Note that the last tree in the above spanning forest for <span class="math inline">\(S_0^3\)</span> crown DAG is not visible because if consist of a single vertex (node) <span class="math inline">\(u\)</span>.</p>
+<p>TODO: in the <a href="_Reachability_labels_for_version_control_graphs.ipynb">Reachability labels for version control graphs</a> notebook from Google Colaboratory there are a few more examples to be copied, or replaced with interactive visualization (where you can choose the graph):</p>
+<ul>
+<li>draw a didactic example of DAG from FELINE</li>
+<li>draw DAG from level-filter example from FELINE</li>
+</ul>
+</section>
+<section id="computing-min-post-tree-intervals-positive-cut-filter" class="level3">
+<h3 class="anchored" data-anchor-id="computing-min-post-tree-intervals-positive-cut-filter">Computing min-post tree intervals (positive-cut filter)</h3>
+<p>Interval labeling (<em>min-post</em> strategy) labels each node <span class="math inline">\(u\)</span> with a range <span class="math inline">\(I_u = [s_u, e_u]\)</span>, where <span class="math inline">\(e_u\)</span> denotes the rank of the node <span class="math inline">\(u\)</span> in <strong><em>some</em></strong> post-order traversal of the tree, where the ranks are assumed to begin at 1, and all the children of a node are assumed to be ordered and fixed for that traversal. Further, <span class="math inline">\(s_u\)</span> denotes the lowest rank for any node <span class="math inline">\(x\)</span> in the subtree rooted at <span class="math inline">\(u\)</span> (i.e., including <span class="math inline">\(u\)</span>).</p>
+<p>For more see the section with the definitions.</p>
+<pre><code>/opt/hostedtoolcache/Python/3.9.16/x64/lib/python3.9/site-packages/fastcore/docscrape.py:225: UserWarning: Unknown section Parameters:
+  else: warn(msg)
+/opt/hostedtoolcache/Python/3.9.16/x64/lib/python3.9/site-packages/fastcore/docscrape.py:225: UserWarning: Unknown section Returns:
+  else: warn(msg)</code></pre>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/labelling/dfs_intervals.py#L43" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="find_dfs_intervals" class="level3">
+<h3 class="anchored" data-anchor-id="find_dfs_intervals">find_dfs_intervals</h3>
+<blockquote class="blockquote">
+<pre><code> find_dfs_intervals (DG, attr=None)</code></pre>
+</blockquote>
+<p>Find min-post labeling of all vertices in graph G, using DFS spanning-tree</p>
+<p>Min-post interval labeling strategy labels each node ‘u’ in the directed spanning tree (DFS tree here) of the acyclic graph <code>DG</code> with a range I_u = [s_u, e_u], where e_u denotes the rank of the node ‘u’ in post-order traversal of the tree (ranks assumed to begin at 1), and s_u denotes the lowest rank of any node ‘w’ in the subtree rooted at ‘u’ (including ‘u’).</p>
+<p>Check that there are no runtime errors when running <code>find_dfs_intervals(graph)</code></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># DEBUG</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>sd<span class="op">=</span>graphs.small_DAG_FELINE()</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>sd.mpi<span class="op">=</span>{</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">'a'</span>:[<span class="dv">1</span>,<span class="dv">5</span>],<span class="st">'b'</span>:[<span class="dv">7</span>,<span class="dv">9</span>],</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">'c'</span>:[<span class="dv">1</span>,<span class="dv">1</span>],<span class="st">'d'</span>:[<span class="dv">2</span>,<span class="dv">2</span>],<span class="st">'e'</span>:[<span class="dv">3</span>,<span class="dv">4</span>],<span class="st">'f'</span>:[<span class="dv">7</span>,<span class="dv">7</span>],<span class="st">'g'</span>:[<span class="dv">8</span>,<span class="dv">8</span>],</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">'h'</span>:[<span class="dv">3</span>,<span class="dv">3</span>],</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'Exact results depend on the spanning tree (DFS traversal order)'</span>)</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'found intervals: </span><span class="sc">%r</span><span class="st">'</span> <span class="op">%</span> find_dfs_intervals(sd))</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'provided ones:   </span><span class="sc">%r</span><span class="st">'</span> <span class="op">%</span> sd.mpi)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Exact results depend on the spanning tree (DFS traversal order)
+found intervals: {'h': [1, 1], 'c': [1, 2], 'd': [3, 3], 'e': [4, 4], 'a': [1, 5], 'f': [6, 6], 'g': [7, 7], 'b': [6, 8]}
+provided ones:   {'a': [1, 5], 'b': [7, 9], 'c': [1, 1], 'd': [2, 2], 'e': [3, 4], 'f': [7, 7], 'g': [8, 8], 'h': [3, 3]}</code></pre>
+</div>
+</div>
+<p>Check visually that min-post tree intervals make sense for an example of small DAG from the FELINE paper</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># get graph</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>sd<span class="op">=</span>graphs.small_DAG_FELINE()</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co">: move setting original positions to `small_DAG_FELINE()` to avoid repetitions</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>sd.tree<span class="op">=</span>{</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">'a'</span>:(<span class="dv">2</span>,<span class="dv">3</span>),<span class="st">'b'</span>:(<span class="fl">4.5</span>,<span class="dv">3</span>),</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">'c'</span>:(<span class="dv">1</span>,<span class="dv">2</span>),<span class="st">'d'</span>:(<span class="dv">2</span>,<span class="dv">2</span>),<span class="st">'e'</span>:(<span class="dv">3</span>,<span class="dv">2</span>),<span class="st">'f'</span>:(<span class="dv">4</span>,<span class="dv">2</span>),<span class="st">'g'</span>:(<span class="dv">5</span>,<span class="dv">2</span>),</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">'h'</span>:(<span class="dv">3</span>,<span class="dv">1</span>)</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="co"># find min-post intervals, and make labels</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>intervals<span class="op">=</span>find_dfs_intervals(sd)</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>intervals_repr<span class="op">=</span>{</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>  v:(<span class="st">'[</span><span class="sc">%d</span><span class="st">,</span><span class="sc">%d</span><span class="st">]'</span><span class="op">%</span>(i[<span class="dv">0</span>],i[<span class="dv">1</span>]))</span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (v,i) <span class="kw">in</span> intervals.items()</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a><span class="co"># configure plot</span></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>plt.axis(<span class="st">'off'</span>)</span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Small DAG with the spanning tree overlay and interval labels</span><span class="ch">\n</span><span class="st">'</span><span class="op">+</span></span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>          <span class="st">'(find_dfs_spanning, find_dfs_intervals)'</span>)</span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a><span class="co"># draw graph, its spanning tree and min-post tree interval labels</span></span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx(sd,</span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>                 pos<span class="op">=</span>sd.tree,</span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>                 node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">8.0</span>,</span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a>                 edge_color<span class="op">=</span><span class="st">'#aaaaaa'</span>,node_color<span class="op">=</span><span class="st">'y'</span>)</span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx_edges(sd,</span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a>                       pos<span class="op">=</span>sd.tree,</span>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a>                       edgelist<span class="op">=</span>find_dfs_spanning(sd),</span>
+<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a>                       node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">2.0</span>,</span>
+<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a>                       arrowstyle<span class="op">=</span><span class="st">'-&gt;'</span>)</span>
+<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx_labels(sd,</span>
+<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>                        pos<span class="op">=</span>{u:(x<span class="op">+</span><span class="fl">0.35</span>,y<span class="op">-</span><span class="fl">0.08</span>) <span class="cf">for</span> (u,(x,y)) <span class="kw">in</span> sd.tree.items()},</span>
+<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a>                        labels<span class="op">=</span>intervals_repr)</span>
+<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a>plt.draw()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<p><img src="07_interval_labels_files/figure-html/cell-15-output-1.png" class="img-fluid"></p>
+</div>
+</div>
+<blockquote class="blockquote">
+<p>TODO: - interactive visualization of spanning tree and min-post tree intervals shown as labels - interactive visualization of post(v) vs level(v) drawn graph, with min-post intervals as labels</p>
+</blockquote>
+</section>
+<section id="computing-min-post-graph-intervals-negative-cut-filter-todo" class="level3">
+<h3 class="anchored" data-anchor-id="computing-min-post-graph-intervals-negative-cut-filter-todo">Computing min-post graph intervals (negative-cut filter) (TODO)</h3>
+</section>
+<section id="computing-preach-extensions-to-min-post-intervals" class="level3">
+<h3 class="anchored" data-anchor-id="computing-preach-extensions-to-min-post-intervals">Computing PReaCH extensions to min-post intervals</h3>
+<p>Code taken from <a href="https://colab.research.google.com/drive/1V-U7_slu5Z3s5iEEMFKhLXtaxSu5xyzg#scrollTo=4l0Ld0Jklq1o">section “DFS spanning-tree extra data” in Google Colab version</a> of the <a href="_Reachability_labels_for_version_control_graphs.ipynb">Reachability labels for version control graphs</a> notebook.</p>
+<pre><code>/opt/hostedtoolcache/Python/3.9.16/x64/lib/python3.9/site-packages/fastcore/docscrape.py:225: UserWarning: Unknown section References:
+  else: warn(msg)</code></pre>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/labelling/dfs_intervals.py#L93" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="find_dfs_intervals_extra" class="level3">
+<h3 class="anchored" data-anchor-id="find_dfs_intervals_extra">find_dfs_intervals_extra</h3>
+<blockquote class="blockquote">
+<pre><code> find_dfs_intervals_extra (DG, extra=False)</code></pre>
+</blockquote>
+<p>Find DFS-derived data of all vertices in graph G</p>
+<p>Min-post interval labeling strategy labels each node ‘u’ in the directed spanning tree (DFS tree here) of the acyclic graph <code>DG</code> with a range I_u = [s_u, e_u], where e_u denotes the rank of the node ‘u’ in post-order traversal of the tree (ranks assumed to begin at 1), and s_u denotes the lowest rank of any node ‘w’ in the subtree rooted at ‘u’ (including ‘u’). This interval is stored under ‘min’ and ‘post’ keys in returned dict.</p>
+<p>For depth first-search (DFS) all nodes reachable from node ‘u’ have their topological ordering in DFS tree, i.e.&nbsp;‘post’, smaller than the ‘post’ value for ‘u’. Additionally we can define ‘f_min’ as minimum ‘post’ number for each node reachable from ‘u’, and ‘f_gap’ as maximum ‘post’ number of nodes reachable from ‘u’ that are not in DFS subtree rooted at ‘u’ or None if ‘f_gap’ would be equal to ‘u’ node’s ‘min’ number.</p>
+<p>We can also define ‘p_tree’ to be node reachable from ‘u’, but not in subtree rooted at ‘u’, that (‘p_tree’) has largest subtree. If such node does not exist it is set to None. For DFS spanning tree we can calculate this value effectively.</p>
+<p>This is based on <em>modified</em> algorithms from PReaCH paper [1]; note that the original version in the paper [1] uses preorder not postorder numbers (pre-max not min-post).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># DEBUG</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>sd<span class="op">=</span>graphs.small_DAG_FELINE()</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>find_dfs_intervals_extra(sd, extra<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<pre><code>{'h': {'post': 1, 'min': 1, 'f_min': 1, 'f_gap': None, 'p_tree': None},
+ 'c': {'post': 2, 'min': 1, 'f_min': 1, 'f_gap': None, 'p_tree': None},
+ 'd': {'post': 3, 'min': 3, 'f_min': 3, 'f_gap': None, 'p_tree': None},
+ 'e': {'post': 4, 'min': 4, 'f_min': 1, 'f_gap': 1, 'p_tree': 'h'},
+ 'a': {'post': 5, 'min': 1, 'f_min': 1, 'f_gap': 1, 'p_tree': None},
+ 'f': {'post': 6, 'min': 6, 'f_min': 1, 'f_gap': 1, 'p_tree': 'h'},
+ 'g': {'post': 7, 'min': 7, 'f_min': 7, 'f_gap': None, 'p_tree': None},
+ 'b': {'post': 8, 'min': 6, 'f_min': 1, 'f_gap': 1, 'p_tree': None}}</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># get graph</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>sd<span class="op">=</span>graphs.small_DAG_FELINE()</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co">: move setting original positions to `small_DAG_FELINE()` to avoid repetitions</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>sd.tree<span class="op">=</span>{</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">'a'</span>:(<span class="dv">2</span>,<span class="dv">3</span>),<span class="st">'b'</span>:(<span class="fl">4.5</span>,<span class="dv">3</span>),</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">'c'</span>:(<span class="dv">1</span>,<span class="dv">2</span>),<span class="st">'d'</span>:(<span class="dv">2</span>,<span class="dv">2</span>),<span class="st">'e'</span>:(<span class="dv">3</span>,<span class="dv">2</span>),<span class="st">'f'</span>:(<span class="dv">4</span>,<span class="dv">2</span>),<span class="st">'g'</span>:(<span class="dv">5</span>,<span class="dv">2</span>),</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">'h'</span>:(<span class="dv">3</span>,<span class="dv">1</span>)</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a><span class="co"># find min-post intervals, and make labels</span></span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>intervals<span class="op">=</span>find_dfs_intervals_extra(sd)</span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>intervals_repr<span class="op">=</span>{</span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>  v:(<span class="st">'[</span><span class="sc">%d</span><span class="st">:</span><span class="sc">%d</span><span class="st">,</span><span class="sc">%d</span><span class="st">]'</span><span class="op">%</span>(i[<span class="st">'f_min'</span>],i[<span class="st">'min'</span>],i[<span class="st">'post'</span>]))</span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (v,i) <span class="kw">in</span> intervals.items()</span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a><span class="co"># configure plot</span></span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a>plt.axis(<span class="st">'off'</span>)</span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Small DAG with the spanning tree overlay and extended interval labels</span><span class="ch">\n</span><span class="st">'</span><span class="op">+</span></span>
+<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>          <span class="st">'(find_dfs_spanning, find_dfs_intervals_extra)'</span>)</span>
+<span id="cb23-21"><a href="#cb23-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-22"><a href="#cb23-22" aria-hidden="true" tabindex="-1"></a><span class="co"># draw graph, its spanning tree and min-post tree interval labels</span></span>
+<span id="cb23-23"><a href="#cb23-23" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx(sd,</span>
+<span id="cb23-24"><a href="#cb23-24" aria-hidden="true" tabindex="-1"></a>                 pos<span class="op">=</span>sd.tree,</span>
+<span id="cb23-25"><a href="#cb23-25" aria-hidden="true" tabindex="-1"></a>                 node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">8.0</span>,</span>
+<span id="cb23-26"><a href="#cb23-26" aria-hidden="true" tabindex="-1"></a>                 edge_color<span class="op">=</span><span class="st">'#aaaaaa'</span>,node_color<span class="op">=</span><span class="st">'y'</span>)</span>
+<span id="cb23-27"><a href="#cb23-27" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx_edges(sd,</span>
+<span id="cb23-28"><a href="#cb23-28" aria-hidden="true" tabindex="-1"></a>                       pos<span class="op">=</span>sd.tree,</span>
+<span id="cb23-29"><a href="#cb23-29" aria-hidden="true" tabindex="-1"></a>                       edgelist<span class="op">=</span>find_dfs_spanning(sd),</span>
+<span id="cb23-30"><a href="#cb23-30" aria-hidden="true" tabindex="-1"></a>                       node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">2.0</span>,</span>
+<span id="cb23-31"><a href="#cb23-31" aria-hidden="true" tabindex="-1"></a>                       arrowstyle<span class="op">=</span><span class="st">'-&gt;'</span>)</span>
+<span id="cb23-32"><a href="#cb23-32" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx_labels(sd,</span>
+<span id="cb23-33"><a href="#cb23-33" aria-hidden="true" tabindex="-1"></a>                        pos<span class="op">=</span>{u:(x<span class="op">+</span><span class="fl">0.25</span>,y<span class="op">-</span><span class="fl">0.12</span>) <span class="cf">for</span> (u,(x,y)) <span class="kw">in</span> sd.tree.items()},</span>
+<span id="cb23-34"><a href="#cb23-34" aria-hidden="true" tabindex="-1"></a>                        labels<span class="op">=</span>intervals_repr)</span>
+<span id="cb23-35"><a href="#cb23-35" aria-hidden="true" tabindex="-1"></a>plt.draw()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<p><img src="07_interval_labels_files/figure-html/cell-18-output-1.png" class="img-fluid"></p>
+</div>
+</div>
+</section>
+</section>
+<section id="references" class="level2">
+<h2 class="anchored" data-anchor-id="references">References</h2>
+<p>TODO</p>
+<ul>
+<li><p><strong>[PReaCH]</strong> Florian Merz, Peter Sanders: “<em>PReaCH: A Fast Lightweight Reachability Index using Pruning and Contraction Hierarchies</em>” (2014)<br>
+In: Schulz A.S., Wagner D. (eds) Algorithms - ESA 2014. ESA 2014. Lecture Notes in Computer Science, vol 8737.<br>
+Springer, Berlin, Heidelberg (Conference Paper: European Symposium on Algorithms)<br>
+<a href="https://doi.org/10.1007/978-3-662-44777-2_58" class="uri">https://doi.org/10.1007/978-3-662-44777-2_58</a></p>
+<p>arXiv:1404.4465v1 [cs.DS], 17 Apr 2014,<br>
+<a href="http://arxiv.org/abs/1404.4465" class="uri">http://arxiv.org/abs/1404.4465</a></p></li>
+</ul>
+<hr>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

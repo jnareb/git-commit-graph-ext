@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.357">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Saving and restoring graphs, reachability labels, evaluation results, etc.">
+
+<title>git_commit_graph_ext - Checkpointing</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+
+<link rel="stylesheet" href="styles.css">
+<meta property="og:title" content="git_commit_graph_ext - Checkpointing">
+<meta property="og:description" content="Saving and restoring graphs, reachability labels, evaluation results, etc.">
+<meta property="og:site-name" content="git_commit_graph_ext">
+<meta name="twitter:title" content="git_commit_graph_ext - Checkpointing">
+<meta name="twitter:description" content="Saving and restoring graphs, reachability labels, evaluation results, etc.">
+<meta name="twitter:card" content="summary">
+</head>
+
+<body class="nav-sidebar floating nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">git_commit_graph_ext</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools ms-auto">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+      <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./checkpoint.html">Checkpointing</a></li></ol></nav>
+      <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+      </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Commit graph labeling for speeding up Git commands</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./tools.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Graphs in Python</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./related.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Related works: various reachability labelings</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./example_graphs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Example directed graphs</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./reachability_index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reachability index</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./levels.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Topological levels</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./interval_labels.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">DFS Intervals Labelling</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./reach.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reachability queries</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./git.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Extracting commit graphs from Git repositories</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./checkpoint.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Checkpointing</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./datasets.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Graph datasets</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./repos.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Large Git repositories</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reachability evaluation</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./a.09_git_explore.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exploring extraction of commit graphs from Git repositories, and examining their shape and stats</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#functions-for-computing-reachability-labels-and-saving-them-and-graph-to-a-file-etc." id="toc-functions-for-computing-reachability-labels-and-saving-them-and-graph-to-a-file-etc." class="nav-link active" data-scroll-target="#functions-for-computing-reachability-labels-and-saving-them-and-graph-to-a-file-etc.">Functions for computing reachability labels, and saving them and graph to a file, etc.</a>
+  <ul class="collapse">
+  <li><a href="#functions-for-saving-graph-structure-as-dataframe-storing-edge-list-to-a-file-and-restoring-it" id="toc-functions-for-saving-graph-structure-as-dataframe-storing-edge-list-to-a-file-and-restoring-it" class="nav-link" data-scroll-target="#functions-for-saving-graph-structure-as-dataframe-storing-edge-list-to-a-file-and-restoring-it">Functions for saving graph structure as <code>DataFrame</code> (storing edge list) to a file, and restoring it</a></li>
+  <li><a href="#dataframe_to_graph" id="toc-dataframe_to_graph" class="nav-link" data-scroll-target="#dataframe_to_graph">dataframe_to_graph</a></li>
+  <li><a href="#graph_to_dataframe" id="toc-graph_to_dataframe" class="nav-link" data-scroll-target="#graph_to_dataframe">graph_to_dataframe</a></li>
+  <li><a href="#load_graph_df" id="toc-load_graph_df" class="nav-link" data-scroll-target="#load_graph_df">load_graph_df</a></li>
+  <li><a href="#load_df_from_file" id="toc-load_df_from_file" class="nav-link" data-scroll-target="#load_df_from_file">load_df_from_file</a></li>
+  <li><a href="#save_graph" id="toc-save_graph" class="nav-link" data-scroll-target="#save_graph">save_graph</a></li>
+  <li><a href="#save_graph_df" id="toc-save_graph_df" class="nav-link" data-scroll-target="#save_graph_df">save_graph_df</a></li>
+  <li><a href="#save_df_to_file" id="toc-save_df_to_file" class="nav-link" data-scroll-target="#save_df_to_file">save_df_to_file</a></li>
+  <li><a href="#guess_format" id="toc-guess_format" class="nav-link" data-scroll-target="#guess_format">guess_format</a></li>
+  <li><a href="#functions-for-computing-reachability-levels-saving-them-to-a-file-as-dataframe-and-restoring-them" id="toc-functions-for-computing-reachability-levels-saving-them-to-a-file-as-dataframe-and-restoring-them" class="nav-link" data-scroll-target="#functions-for-computing-reachability-levels-saving-them-to-a-file-as-dataframe-and-restoring-them">Functions for computing reachability levels, saving them to a file (as <code>DataFrame</code>), and restoring them</a></li>
+  <li><a href="#compute_reachability_labels" id="toc-compute_reachability_labels" class="nav-link" data-scroll-target="#compute_reachability_labels">compute_reachability_labels</a></li>
+  <li><a href="#graph_data_to_dataframe" id="toc-graph_data_to_dataframe" class="nav-link" data-scroll-target="#graph_data_to_dataframe">graph_data_to_dataframe</a></li>
+  <li><a href="#compute_cached_df" id="toc-compute_cached_df" class="nav-link" data-scroll-target="#compute_cached_df">compute_cached_df</a></li>
+  <li><a href="#compute_cached_reachability_labels_df" id="toc-compute_cached_reachability_labels_df" class="nav-link" data-scroll-target="#compute_cached_reachability_labels_df">compute_cached_reachability_labels_df</a></li>
+  <li><a href="#compute_cached_graph_df" id="toc-compute_cached_graph_df" class="nav-link" data-scroll-target="#compute_cached_graph_df">compute_cached_graph_df</a></li>
+  <li><a href="#dataframe_to_reachability_labels" id="toc-dataframe_to_reachability_labels" class="nav-link" data-scroll-target="#dataframe_to_reachability_labels">dataframe_to_reachability_labels</a></li>
+  <li><a href="#compute_cached_reachability_labels" id="toc-compute_cached_reachability_labels" class="nav-link" data-scroll-target="#compute_cached_reachability_labels">compute_cached_reachability_labels</a></li>
+  <li><a href="#compute_cached_graph" id="toc-compute_cached_graph" class="nav-link" data-scroll-target="#compute_cached_graph">compute_cached_graph</a></li>
+  </ul></li>
+  </ul>
+<div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/issues/new" class="toc-action">Report an issue</a></p></div></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Checkpointing</h1>
+</div>
+
+<div>
+  <div class="description">
+    Saving and restoring graphs, reachability labels, evaluation results, etc.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<!-- WARNING: THIS FILE WAS AUTOGENERATED! DO NOT EDIT! -->
+<section id="functions-for-computing-reachability-labels-and-saving-them-and-graph-to-a-file-etc." class="level2">
+<h2 class="anchored" data-anchor-id="functions-for-computing-reachability-labels-and-saving-them-and-graph-to-a-file-etc.">Functions for computing reachability labels, and saving them and graph to a file, etc.</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># imports for example graphs</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> git_commit_graph_ext.example_graphs <span class="im">as</span> graphs</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># before tests (test fixture)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># example graph</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>example_graph <span class="op">=</span> graphs.commit_graph_Stolee()</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>example_graph_name <span class="op">=</span> <span class="st">'commit_graph_Stolee'</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># check that it worked</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"the example commit graph '</span><span class="sc">{}</span><span class="st">' from Stolee blog posts has </span><span class="sc">{:d}</span><span class="st"> nodes and </span><span class="sc">{:d}</span><span class="st"> edges"</span>.</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>      <span class="bu">format</span>(example_graph_name, example_graph.number_of_nodes(), example_graph.number_of_edges()))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>the example commit graph 'commit_graph_Stolee' from Stolee blog posts has 23 nodes and 31 edges</code></pre>
+</div>
+</div>
+<section id="functions-for-saving-graph-structure-as-dataframe-storing-edge-list-to-a-file-and-restoring-it" class="level3">
+<h3 class="anchored" data-anchor-id="functions-for-saving-graph-structure-as-dataframe-storing-edge-list-to-a-file-and-restoring-it">Functions for saving graph structure as <code>DataFrame</code> (storing edge list) to a file, and restoring it</h3>
+<p>Helper function to get basename for saving graph and/or graph data to a file (as a dataset).</p>
+<p><u>Test</u> that examples from the docstring works:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> _savefile_name(<span class="st">'example_graph'</span>) <span class="op">==</span> Path(<span class="st">'datasets/example_graph.df_edgelist.csv.gz'</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> _savefile_name(<span class="st">'example_graph'</span>, kind<span class="op">=</span><span class="st">'adjlist'</span>, file_format<span class="op">=</span><span class="st">'txt'</span>) <span class="op">==</span> Path(<span class="st">'datasets/example_graph.adjlist.txt'</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> _savefile_name(<span class="st">'example_graph'</span>, out_dir<span class="op">=</span><span class="st">'data'</span>, kind<span class="op">=</span><span class="st">'adjlist'</span>, file_format<span class="op">=</span><span class="st">'txt'</span>) <span class="op">==</span> Path(<span class="st">'data/example_graph.adjlist.txt'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Save graph to a <code>DataFrame</code> (saving containing edgelist information), and restore it.</p>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/checkpoint.py#L80" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="dataframe_to_graph" class="level3">
+<h3 class="anchored" data-anchor-id="dataframe_to_graph">dataframe_to_graph</h3>
+<blockquote class="blockquote">
+<pre><code> dataframe_to_graph (df)</code></pre>
+</blockquote>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/checkpoint.py#L76" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="graph_to_dataframe" class="level3">
+<h3 class="anchored" data-anchor-id="graph_to_dataframe">graph_to_dataframe</h3>
+<blockquote class="blockquote">
+<pre><code> graph_to_dataframe (graph)</code></pre>
+</blockquote>
+<p><u>Test</u> that saving to the <code>DataFrame</code> and restoring from it works correctly,… up to nodes that are not connected – those cannot be stored using only edge list data, but with addition of node list it should be possible to restore graph exactly:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>example_graph_df <span class="op">=</span> graph_to_dataframe(example_graph)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">len</span>(example_graph_df.index) <span class="op">==</span> example_graph.number_of_edges()</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - number of rows in dataframe with edgelist </span><span class="sc">{}</span><span class="st"> matches number of edges </span><span class="sc">{}</span><span class="st">'</span>.</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>      <span class="bu">format</span>(<span class="bu">len</span>(example_graph_df.index), example_graph.number_of_edges()))</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>restored_graph <span class="op">=</span> dataframe_to_graph(example_graph_df)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> restored_graph.number_of_edges() <span class="op">==</span> example_graph.number_of_edges()</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - number of edges </span><span class="sc">{}</span><span class="st"> in restored graph matches number of edges </span><span class="sc">{}</span><span class="st"> in the original'</span>.</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>      <span class="bu">format</span>(restored_graph.number_of_edges(), example_graph.number_of_edges()))</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> restored_graph.edges <span class="op">==</span> example_graph.edges</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - all edges from the original graph got restored'</span>)</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">set</span>(restored_graph).issubset(example_graph)</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - all restored nodes are in the original graph'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>ok - number of rows in dataframe with edgelist 31 matches number of edges 31
+ok - number of edges 31 in restored graph matches number of edges 31 in the original
+ok - all edges from the original graph got restored
+ok - all restored nodes are in the original graph</code></pre>
+</div>
+</div>
+<p>Save graph to a file (via <code>DataFrame</code> containing edgelist information), and restore it</p>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/checkpoint.py#L134" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="load_graph_df" class="level3">
+<h3 class="anchored" data-anchor-id="load_graph_df">load_graph_df</h3>
+<blockquote class="blockquote">
+<pre><code> load_graph_df (graph_name, datasets_dir='datasets',
+                input_format='csv.gz')</code></pre>
+</blockquote>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/checkpoint.py#L125" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="load_df_from_file" class="level3">
+<h3 class="anchored" data-anchor-id="load_df_from_file">load_df_from_file</h3>
+<blockquote class="blockquote">
+<pre><code> load_df_from_file (filename, input_format='csv.gz')</code></pre>
+</blockquote>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/checkpoint.py#L110" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="save_graph" class="level3">
+<h3 class="anchored" data-anchor-id="save_graph">save_graph</h3>
+<blockquote class="blockquote">
+<pre><code> save_graph (graph, graph_name=None, datasets_dir='datasets',
+             output_format='csv.gz', overwrite=False)</code></pre>
+</blockquote>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/checkpoint.py#L101" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="save_graph_df" class="level3">
+<h3 class="anchored" data-anchor-id="save_graph_df">save_graph_df</h3>
+<blockquote class="blockquote">
+<pre><code> save_graph_df (df, graph_name, datasets_dir='datasets',
+                output_format='csv.gz', overwrite=False)</code></pre>
+</blockquote>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/checkpoint.py#L92" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="save_df_to_file" class="level3">
+<h3 class="anchored" data-anchor-id="save_df_to_file">save_df_to_file</h3>
+<blockquote class="blockquote">
+<pre><code> save_df_to_file (df, filename, output_format='csv.gz')</code></pre>
+</blockquote>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/checkpoint.py#L84" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="guess_format" class="level3">
+<h3 class="anchored" data-anchor-id="guess_format">guess_format</h3>
+<blockquote class="blockquote">
+<pre><code> guess_format (filename)</code></pre>
+</blockquote>
+<p><u>Test</u> guessing file format from file name</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> guess_format(<span class="st">'datasets/hellogitworld-commit_graph.df_edgelist.csv.gz'</span>) <span class="op">==</span> <span class="st">'csv.gz'</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> guess_format(<span class="st">'datasets/hellogitworld-commit_graph.df_edgelist.csv'</span>) <span class="op">==</span> <span class="st">'csv'</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> guess_format(<span class="st">'datasets/hellogitworld-commit_graph.adjlist.txt'</span>) <span class="op">==</span> <span class="st">'adjlist.txt'</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><u>Test</u> saving graph structure (via <code>DataFrame</code>) to a file, and restoring / reading such <code>DataFrame</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'graph.name = </span><span class="sc">{}</span><span class="st">'</span>.<span class="bu">format</span>(example_graph.name))</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'testing save_graph()'</span>)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>save_graph(example_graph)</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'testing save_graph_df()'</span>)</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>save_graph_df(example_graph_df, graph_name<span class="op">=</span>example_graph_name)</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'there should be appropriately named file in the list below:'</span>)</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>[<span class="st">"</span><span class="sc">{name:&lt;50}</span><span class="st"> </span><span class="sc">{size:&gt;7}</span><span class="st">"</span>.<span class="bu">format</span>(name<span class="op">=</span>p.name, size<span class="op">=</span>p.stat().st_size)</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a> <span class="cf">for</span> p <span class="kw">in</span> Path(<span class="st">"datasets"</span>).glob(example_graph_name<span class="op">+</span><span class="st">"*"</span>)]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>graph.name = 
+testing save_graph()
+-&gt; graph_name: 
+-&gt; filename: datasets\.df_edgelist.csv.gz
+testing save_graph_df()
+-&gt; filename: datasets\commit_graph_Stolee.df_edgelist.csv.gz
+there should be appropriately named file in the list below:</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre><code>['commit_graph_Stolee-test.df_edgelist.csv.gz            236',
+ 'commit_graph_Stolee-test.df_nodedata.csv.gz            272',
+ 'commit_graph_Stolee.df_edgelist.csv.gz                 231',
+ 'commit_graph_Stolee.df_nodedata.csv.gz                 267']</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'restoring graph named "</span><span class="sc">{}</span><span class="st">"'</span>.<span class="bu">format</span>(example_graph_name))</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> load_graph_df(example_graph_name)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> example_graph_df.equals(df)</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - dataframe and restored dataframe are equal'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>restoring graph named "commit_graph_Stolee"
+&lt;- filename: datasets\commit_graph_Stolee.df_edgelist.csv.gz
+ok - dataframe and restored dataframe are equal</code></pre>
+</div>
+</div>
+</section>
+<section id="functions-for-computing-reachability-levels-saving-them-to-a-file-as-dataframe-and-restoring-them" class="level3">
+<h3 class="anchored" data-anchor-id="functions-for-computing-reachability-levels-saving-them-to-a-file-as-dataframe-and-restoring-them">Functions for computing reachability levels, saving them to a file (as <code>DataFrame</code>), and restoring them</h3>
+<p>Compute levels and min-post intervals for a graph, and store them as attributes of the graph object</p>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/checkpoint.py#L141" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="compute_reachability_labels" class="level3">
+<h3 class="anchored" data-anchor-id="compute_reachability_labels">compute_reachability_labels</h3>
+<blockquote class="blockquote">
+<pre><code> compute_reachability_labels (graph, recompute=False)</code></pre>
+</blockquote>
+<p><u>Test</u> computing reachability labels and saving them as attributes of the graph object</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'compute reachability labels for </span><span class="sc">{}</span><span class="st"> graph'</span>.<span class="bu">format</span>(example_graph_name))</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>compute_reachability_labels(example_graph)</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'we should see </span><span class="sc">{}</span><span class="st"> and </span><span class="sc">{}</span><span class="st"> among dict-values public attributes'</span>.<span class="bu">format</span>(<span class="st">'lvl'</span>, <span class="st">'mpi_ext'</span>))</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (attr, val) <span class="kw">in</span> example_graph.__dict__.items():</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">isinstance</span>(val, <span class="bu">dict</span>) <span class="kw">and</span> <span class="kw">not</span> attr.startswith(<span class="st">'_'</span>):</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">'- </span><span class="sc">{:s}</span><span class="st">'</span>.<span class="bu">format</span>(attr))</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">hasattr</span>(example_graph, <span class="st">'lvl'</span>)</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">hasattr</span>(example_graph, <span class="st">'mpi_ext'</span>)</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - graph has both "</span><span class="sc">{}</span><span class="st">" and "</span><span class="sc">{}</span><span class="st">" attributes'</span>.<span class="bu">format</span>(<span class="st">'lvl'</span>, <span class="st">'mpi_ext'</span>))</span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'reachability labels should be computed for all nodes'</span>)</span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">set</span>(example_graph.lvl.keys()) <span class="op">==</span> <span class="bu">set</span>(example_graph.nodes)</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">set</span>(example_graph.mpi_ext.keys()) <span class="op">==</span> <span class="bu">set</span>(example_graph.nodes)</span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - both lvl and mpi_ext keys are all </span><span class="sc">{}</span><span class="st"> graph nodes'</span>.<span class="bu">format</span>(<span class="bu">len</span>(example_graph.nodes)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>compute reachability labels for commit_graph_Stolee graph
+we should see lvl and mpi_ext among dict-values public attributes
+- graph
+- pos
+- lvl
+- mpi_ext
+ok - graph has both "lvl" and "mpi_ext" attributes
+reachability labels should be computed for all nodes
+ok - both lvl and mpi_ext keys are all 23 graph nodes</code></pre>
+</div>
+</div>
+<p>Store reachability labels and per-node information in a <code>DataFrame</code></p>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/checkpoint.py#L149" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="graph_data_to_dataframe" class="level3">
+<h3 class="anchored" data-anchor-id="graph_data_to_dataframe">graph_data_to_dataframe</h3>
+<blockquote class="blockquote">
+<pre><code> graph_data_to_dataframe (graph, append_to=None)</code></pre>
+</blockquote>
+<p><u>Test</u> computing all per-node data for a graph and storing them in <code>DataFrame</code></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> graph_data_to_dataframe(example_graph)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'check that the dataframe has all the columns'</span>)</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">set</span>(df.columns) <span class="op">==</span> <span class="bu">set</span>([<span class="st">'level'</span>, <span class="st">'f_min'</span>, <span class="st">'min'</span>, <span class="st">'post'</span>, <span class="st">'in degree'</span>, <span class="st">'out degree'</span>, <span class="st">'degree'</span>])</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- columns: </span><span class="sc">{}</span><span class="st">'</span>.<span class="bu">format</span>(df.columns.tolist()))</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'check that the dataframe has all the rows'</span>)</span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">set</span>(df.index) <span class="op">==</span> <span class="bu">set</span>(example_graph.nodes)</span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- rows:    </span><span class="sc">{}</span><span class="st">...'</span>.<span class="bu">format</span>(<span class="bu">list</span>(example_graph.nodes)[<span class="dv">0</span>:<span class="dv">5</span>]))</span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>df.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>check that the dataframe has all the columns
+- columns: ['f_min', 'min', 'post', 'level', 'in degree', 'out degree', 'degree']
+check that the dataframe has all the rows
+- rows:    ['A', 'a7', 'a5', 'a4', 'a3']...</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">f_min</th>
+<th data-quarto-table-cell-role="th">min</th>
+<th data-quarto-table-cell-role="th">post</th>
+<th data-quarto-table-cell-role="th">level</th>
+<th data-quarto-table-cell-role="th">in degree</th>
+<th data-quarto-table-cell-role="th">out degree</th>
+<th data-quarto-table-cell-role="th">degree</th>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">node</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">b0</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+<td>3</td>
+<td>0</td>
+<td>3</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">a1</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+<td>1</td>
+<td>2</td>
+<td>1</td>
+<td>3</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">a2</td>
+<td>1</td>
+<td>1</td>
+<td>3</td>
+<td>2</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">a3</td>
+<td>1</td>
+<td>1</td>
+<td>4</td>
+<td>3</td>
+<td>2</td>
+<td>1</td>
+<td>3</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">a4</td>
+<td>1</td>
+<td>1</td>
+<td>5</td>
+<td>4</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<p>Compute and save graph structure, its reachability labels and other per-node info to a file, and restore it.<br>
+Don’t redo calculations that can be retrieved from a file.</p>
+<pre><code>/opt/hostedtoolcache/Python/3.9.16/x64/lib/python3.9/site-packages/fastcore/docscrape.py:225: UserWarning: Unknown section Parameters:
+  else: warn(msg)
+/opt/hostedtoolcache/Python/3.9.16/x64/lib/python3.9/site-packages/fastcore/docscrape.py:225: UserWarning: Unknown section Returns:
+  else: warn(msg)</code></pre>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/checkpoint.py#L169" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="compute_cached_df" class="level3">
+<h3 class="anchored" data-anchor-id="compute_cached_df">compute_cached_df</h3>
+<blockquote class="blockquote">
+<pre><code> compute_cached_df (code, filename, file_format=None, dont_save=False)</code></pre>
+</blockquote>
+<p>Compute <code>DataFrame</code>, or retrieve it from a given file if it exists</p>
+<p><u>Test</u> that the code runs if the file does not exist.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>compute_cached_df(<span class="kw">lambda</span>: <span class="bu">print</span>(<span class="st">"the provided code ran"</span>), <span class="st">'this_file_does_not_exist.xxx'</span>, dont_save<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>the provided code ran</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>test_df <span class="op">=</span> pd.DataFrame({<span class="st">'col1'</span>: [<span class="dv">1</span>, <span class="dv">2</span>], <span class="st">'col2'</span>: [<span class="dv">3</span>, <span class="dv">4</span>]})</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> compute_cached_df(<span class="kw">lambda</span>: test_df, <span class="st">'this_file_does_not_exist.xxx'</span>, dont_save<span class="op">=</span><span class="va">True</span>)<span class="op">\</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>                         .equals(test_df)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><u>Test</u> that the code do not run if the file exists, and that we get what we saved</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>expect_df <span class="op">=</span> pd.DataFrame({<span class="st">'col1'</span>: [<span class="dv">1</span>, <span class="dv">2</span>], <span class="st">'col2'</span>: [<span class="dv">3</span>, <span class="dv">4</span>]})</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>df_filename <span class="op">=</span> <span class="st">'datasets/example_dataframe.csv.gz'</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>save_df_to_file(expect_df, df_filename)</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>actual_df <span class="op">=</span> compute_cached_df(<span class="kw">lambda</span>: <span class="bu">print</span>(<span class="st">"THIS SHOULD NOT RUN"</span>), df_filename)</span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> actual_df.equals(expect_df)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><u>Test</u> that <a href="https://jnareb.github.io/git-commit-graph-ext/checkpoint.html#compute_cached_df"><code>compute_cached_df</code></a> saves results to a file</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>_counter <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> example_dataframe():</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">global</span> _counter</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>    _counter <span class="op">=</span> _counter <span class="op">+</span> <span class="dv">1</span></span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pd.DataFrame({<span class="st">'col1'</span>: [<span class="dv">1</span>, <span class="dv">2</span>], <span class="st">'col2'</span>: [<span class="dv">3</span>, <span class="dv">4</span>]})</span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>expect_df <span class="op">=</span> example_dataframe()</span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>_counter <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>df_filename <span class="op">=</span> <span class="st">'datasets/example_dataframe.csv.gz'</span></span>
+<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Path(df_filename).unlink(missing_ok=True)  # requires Python 3.8 or later</span></span>
+<span id="cb33-13"><a href="#cb33-13" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> Path(df_filename).exists():</span>
+<span id="cb33-14"><a href="#cb33-14" aria-hidden="true" tabindex="-1"></a>    Path(df_filename).unlink()</span>
+<span id="cb33-15"><a href="#cb33-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-16"><a href="#cb33-16" aria-hidden="true" tabindex="-1"></a><span class="co"># first time it should perform computations and save, second time get from file</span></span>
+<span id="cb33-17"><a href="#cb33-17" aria-hidden="true" tabindex="-1"></a>actual_df <span class="op">=</span> compute_cached_df(example_dataframe, df_filename)</span>
+<span id="cb33-18"><a href="#cb33-18" aria-hidden="true" tabindex="-1"></a>actual_df <span class="op">=</span> compute_cached_df(example_dataframe, df_filename)</span>
+<span id="cb33-19"><a href="#cb33-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-20"><a href="#cb33-20" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'dataframe:</span><span class="ch">\n</span><span class="sc">{}</span><span class="ch">\n</span><span class="st">'</span>.<span class="bu">format</span>(actual_df))</span>
+<span id="cb33-21"><a href="#cb33-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-22"><a href="#cb33-22" aria-hidden="true" tabindex="-1"></a><span class="co"># tests</span></span>
+<span id="cb33-23"><a href="#cb33-23" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> actual_df.equals(expect_df)</span>
+<span id="cb33-24"><a href="#cb33-24" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - extracted dataframe matches the one being saved'</span>)</span>
+<span id="cb33-25"><a href="#cb33-25" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> Path(df_filename).exists() <span class="kw">and</span> Path(df_filename).is_file()</span>
+<span id="cb33-26"><a href="#cb33-26" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - there exist file "</span><span class="sc">{}</span><span class="st">"'</span>.<span class="bu">format</span>(df_filename))</span>
+<span id="cb33-27"><a href="#cb33-27" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> _counter <span class="op">==</span> <span class="dv">1</span></span>
+<span id="cb33-28"><a href="#cb33-28" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - the `example_dataframe()` was called only 1 time (actual: </span><span class="sc">{}</span><span class="st"> time(s))'</span>.<span class="bu">format</span>(_counter))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>dataframe:
+   col1  col2
+0     1     3
+1     2     4
+
+ok - extracted dataframe matches the one being saved
+ok - there exist file "datasets/example_dataframe.csv.gz"
+ok - the `example_dataframe()` was called only 1 time (actual: 1 time(s))</code></pre>
+</div>
+</div>
+<p>Compute <code>DataFrame</code> with graph structure (<code>compute_cached_graph_df()</code>) and reachability labels (<code>compute_cached_reachability_labels_df()</code>) and save it to a file, or retrieve it from a file if it exists.</p>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/checkpoint.py#L206" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="compute_cached_reachability_labels_df" class="level3">
+<h3 class="anchored" data-anchor-id="compute_cached_reachability_labels_df">compute_cached_reachability_labels_df</h3>
+<blockquote class="blockquote">
+<pre><code> compute_cached_reachability_labels_df (graph, graph_name=None,
+                                        append_to=None,
+                                        datasets_dir='datasets',
+                                        file_format='csv.gz')</code></pre>
+</blockquote>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/checkpoint.py#L199" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="compute_cached_graph_df" class="level3">
+<h3 class="anchored" data-anchor-id="compute_cached_graph_df">compute_cached_graph_df</h3>
+<blockquote class="blockquote">
+<pre><code> compute_cached_graph_df (graph_generator, graph_name,
+                          datasets_dir='datasets', file_format='csv.gz')</code></pre>
+</blockquote>
+<p><u>Test</u> <code>compute_cached_graph_df()</code> and <code>compute_cached_reachability_labels_df()</code></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>graph_df <span class="op">=</span> compute_cached_graph_df(graphs.commit_graph_Stolee, <span class="st">'commit_graph_Stolee-test'</span>)</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> graph_df.equals(graph_to_dataframe(graphs.commit_graph_Stolee()))</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>graph_data_df <span class="op">=</span> compute_cached_reachability_labels_df(example_graph, example_graph_name)</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> graph_data_df.equals(graph_data_to_dataframe(example_graph))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>To generate graph out of dataframe, use <code>dataframe_to_graph()</code>, defined earlier.</p>
+<p>To retrieve reachability labels from the dataframe, and store them in graph attributes, use <code>dataframe_to_reachability_labels()</code>.</p>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/checkpoint.py#L222" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="dataframe_to_reachability_labels" class="level3">
+<h3 class="anchored" data-anchor-id="dataframe_to_reachability_labels">dataframe_to_reachability_labels</h3>
+<blockquote class="blockquote">
+<pre><code> dataframe_to_reachability_labels (df, graph, recompute=False)</code></pre>
+</blockquote>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="co"># check the assumptions of the code</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> df[[<span class="st">'f_min'</span>, <span class="st">'min'</span>, <span class="st">'post'</span>]].to_dict(orient<span class="op">=</span><span class="st">'index'</span>) <span class="op">==</span> example_graph.mpi_ext</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> df[<span class="st">'level'</span>].to_dict() <span class="op">==</span> example_graph.lvl</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Generate graph, or retrieve it from saved <code>DataFrame</code> with edge list data.</p>
+<p>Generate reachability labels for the graph, or retrieve them from saved <code>DataFrame</code> with per-node data, adding missing nodes if necessary</p>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/checkpoint.py#L259" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="compute_cached_reachability_labels" class="level3">
+<h3 class="anchored" data-anchor-id="compute_cached_reachability_labels">compute_cached_reachability_labels</h3>
+<blockquote class="blockquote">
+<pre><code> compute_cached_reachability_labels (graph, graph_name=None,
+                                     add_missing_nodes=True,
+                                     datasets_dir='datasets',
+                                     file_format='csv.gz')</code></pre>
+</blockquote>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/checkpoint.py#L233" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="compute_cached_graph" class="level3">
+<h3 class="anchored" data-anchor-id="compute_cached_graph">compute_cached_graph</h3>
+<blockquote class="blockquote">
+<pre><code> compute_cached_graph (graph_generator, graph_name,
+                       datasets_dir='datasets', file_format='csv.gz')</code></pre>
+</blockquote>
+<p><u>Test</u> that <code>compute_cached_graph()</code> works</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>expect_graph <span class="op">=</span> graphs.commit_graph_Stolee()</span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>actual_graph <span class="op">=</span> compute_cached_graph(graphs.commit_graph_Stolee, <span class="st">'commit_graph_Stolee-test'</span>)</span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> expect_graph.nodes <span class="op">==</span> actual_graph.nodes</span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - retrieved/computed graph has the same nodes'</span>)</span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> expect_graph.edges <span class="op">==</span> actual_graph.edges</span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - retrieved/computed graph has the same edges'</span>)</span>
+<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'</span><span class="ch">\n</span><span class="st">public attributes of retrieved/computed graph'</span>)</span>
+<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (attr, val) <span class="kw">in</span> actual_graph.__dict__.items():</span>
+<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> <span class="bu">isinstance</span>(val, <span class="bu">type</span>) <span class="kw">and</span> <span class="kw">not</span> attr.startswith(<span class="st">'_'</span>):</span>
+<span id="cb42-10"><a href="#cb42-10" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">'- </span><span class="sc">{:s}</span><span class="st"> (</span><span class="sc">{}</span><span class="st">)'</span>.<span class="bu">format</span>(attr, <span class="bu">type</span>(val)))</span>
+<span id="cb42-11"><a href="#cb42-11" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb42-12"><a href="#cb42-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'</span><span class="ch">\n</span><span class="st">public attributes of example graph'</span>)</span>
+<span id="cb42-13"><a href="#cb42-13" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (attr, val) <span class="kw">in</span> expect_graph.__dict__.items():</span>
+<span id="cb42-14"><a href="#cb42-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> <span class="bu">isinstance</span>(val, <span class="bu">type</span>)  <span class="kw">and</span> <span class="kw">not</span> attr.startswith(<span class="st">'_'</span>):</span>
+<span id="cb42-15"><a href="#cb42-15" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">'- </span><span class="sc">{:s}</span><span class="st"> (</span><span class="sc">{}</span><span class="st">)'</span>.<span class="bu">format</span>(attr, <span class="bu">type</span>(val)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>ok - retrieved/computed graph has the same nodes
+ok - retrieved/computed graph has the same edges
+
+public attributes of retrieved/computed graph
+- graph (&lt;class 'dict'&gt;)
+- df_edgelist (&lt;class 'pandas.core.frame.DataFrame'&gt;)
+- nodes (&lt;class 'networkx.classes.reportviews.NodeView'&gt;)
+
+public attributes of example graph
+- graph (&lt;class 'dict'&gt;)
+- pos (&lt;class 'dict'&gt;)
+- nodes (&lt;class 'networkx.classes.reportviews.NodeView'&gt;)</code></pre>
+</div>
+</div>
+<p><u>Test</u> that <code>compute_cached_reachability_labels()</code> works</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>some_graph <span class="op">=</span> graphs.commit_graph_Stolee()</span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>compute_cached_reachability_labels(some_graph, <span class="st">'commit_graph_Stolee-test'</span>)</span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>compute_cached_reachability_labels(some_graph, <span class="st">'commit_graph_Stolee-test'</span>)</span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a><span class="co">#print('')</span></span>
+<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'public attributes of the graph named "</span><span class="sc">{}</span><span class="st">"'</span>.<span class="bu">format</span>(<span class="st">'commit_graph_Stolee-test'</span>))</span>
+<span id="cb44-7"><a href="#cb44-7" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (attr, val) <span class="kw">in</span> some_graph.__dict__.items():</span>
+<span id="cb44-8"><a href="#cb44-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> <span class="bu">isinstance</span>(val, <span class="bu">type</span>)  <span class="kw">and</span> <span class="kw">not</span> attr.startswith(<span class="st">'_'</span>):</span>
+<span id="cb44-9"><a href="#cb44-9" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">'- </span><span class="sc">{!s}</span><span class="st"> (</span><span class="sc">{}</span><span class="st">)'</span>.<span class="bu">format</span>(attr, <span class="bu">type</span>(val)))</span>
+<span id="cb44-10"><a href="#cb44-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-11"><a href="#cb44-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">''</span>)</span>
+<span id="cb44-12"><a href="#cb44-12" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> some_graph.df_nodedata</span>
+<span id="cb44-13"><a href="#cb44-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'check that the dataframe has all the columns'</span>)</span>
+<span id="cb44-14"><a href="#cb44-14" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">set</span>(df.columns) <span class="op">==</span> <span class="bu">set</span>([<span class="st">'level'</span>, <span class="st">'f_min'</span>, <span class="st">'min'</span>, <span class="st">'post'</span>, <span class="st">'in degree'</span>, <span class="st">'out degree'</span>, <span class="st">'degree'</span>])</span>
+<span id="cb44-15"><a href="#cb44-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- columns: </span><span class="sc">{}</span><span class="st">'</span>.<span class="bu">format</span>(df.columns.tolist()))</span>
+<span id="cb44-16"><a href="#cb44-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-17"><a href="#cb44-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'check that the dataframe has all the rows'</span>)</span>
+<span id="cb44-18"><a href="#cb44-18" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">set</span>(df.index) <span class="op">==</span> <span class="bu">set</span>(some_graph.nodes)</span>
+<span id="cb44-19"><a href="#cb44-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- rows:    </span><span class="sc">{}</span><span class="st">...'</span>.<span class="bu">format</span>(<span class="bu">list</span>(example_graph.nodes)[<span class="dv">0</span>:<span class="dv">5</span>]))        </span>
+<span id="cb44-20"><a href="#cb44-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-21"><a href="#cb44-21" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'check that graph has "lvl" attribute'</span>)</span>
+<span id="cb44-22"><a href="#cb44-22" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">hasattr</span>(some_graph, <span class="st">'lvl'</span>)</span>
+<span id="cb44-23"><a href="#cb44-23" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- lvls:    </span><span class="sc">{}</span><span class="st">...'</span>.<span class="bu">format</span>({k: some_graph.lvl[k] <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">list</span>(some_graph.lvl)[:<span class="dv">5</span>]}))</span>
+<span id="cb44-24"><a href="#cb44-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-25"><a href="#cb44-25" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'check that graph has "mpi_ext" attribute'</span>)</span>
+<span id="cb44-26"><a href="#cb44-26" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">hasattr</span>(some_graph, <span class="st">'mpi_ext'</span>)</span>
+<span id="cb44-27"><a href="#cb44-27" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- mpi_ext: </span><span class="sc">{}</span><span class="st">...'</span>.<span class="bu">format</span>({k: some_graph.mpi_ext[k] <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">list</span>(some_graph.mpi_ext)[:<span class="dv">2</span>]}))</span>
+<span id="cb44-28"><a href="#cb44-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-29"><a href="#cb44-29" aria-hidden="true" tabindex="-1"></a>some_graph.df_nodedata.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>public attributes of the graph named "commit_graph_Stolee-test"
+- graph (&lt;class 'dict'&gt;)
+- pos (&lt;class 'dict'&gt;)
+- df_nodedata (&lt;class 'pandas.core.frame.DataFrame'&gt;)
+- lvl (&lt;class 'dict'&gt;)
+- mpi_ext (&lt;class 'dict'&gt;)
+- nodes (&lt;class 'networkx.classes.reportviews.NodeView'&gt;)
+
+check that the dataframe has all the columns
+- columns: ['f_min', 'min', 'post', 'level', 'in degree', 'out degree', 'degree']
+check that the dataframe has all the rows
+- rows:    ['A', 'a7', 'a5', 'a4', 'a3']...
+check that graph has "lvl" attribute
+- lvls:    {'b0': 0, 'a1': 1, 'a2': 2, 'a3': 3, 'a4': 4}...
+check that graph has "mpi_ext" attribute
+- mpi_ext: {'b0': {'f_min': 1, 'min': 1, 'post': 1}, 'a1': {'f_min': 1, 'min': 1, 'post': 2}}...</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">f_min</th>
+<th data-quarto-table-cell-role="th">min</th>
+<th data-quarto-table-cell-role="th">post</th>
+<th data-quarto-table-cell-role="th">level</th>
+<th data-quarto-table-cell-role="th">in degree</th>
+<th data-quarto-table-cell-role="th">out degree</th>
+<th data-quarto-table-cell-role="th">degree</th>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">node</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">b0</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+<td>3</td>
+<td>0</td>
+<td>3</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">a1</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+<td>1</td>
+<td>2</td>
+<td>1</td>
+<td>3</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">a2</td>
+<td>1</td>
+<td>1</td>
+<td>3</td>
+<td>2</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">a3</td>
+<td>1</td>
+<td>1</td>
+<td>4</td>
+<td>3</td>
+<td>2</td>
+<td>1</td>
+<td>3</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">a4</td>
+<td>1</td>
+<td>1</td>
+<td>5</td>
+<td>4</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<hr>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

@@ -1,0 +1,1 @@
+Sitemap: https://jnareb.github.io/git-commit-graph-ext/sitemap.xml

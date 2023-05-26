@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.357">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Experimental results of evaluation of how various reachability indices speed up reachability queries.">
+
+<title>git_commit_graph_ext - Reachability evaluation</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+
+<link rel="stylesheet" href="styles.css">
+<meta property="og:title" content="git_commit_graph_ext - Reachability evaluation">
+<meta property="og:description" content="Experimental results of evaluation of how various reachability indices speed up reachability queries.">
+<meta property="og:site-name" content="git_commit_graph_ext">
+<meta name="twitter:title" content="git_commit_graph_ext - Reachability evaluation">
+<meta name="twitter:description" content="Experimental results of evaluation of how various reachability indices speed up reachability queries.">
+<meta name="twitter:card" content="summary">
+</head>
+
+<body class="nav-sidebar floating nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">git_commit_graph_ext</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools ms-auto">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+      <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./evaluation.html">Reachability evaluation</a></li></ol></nav>
+      <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+      </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Commit graph labeling for speeding up Git commands</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./tools.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Graphs in Python</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./related.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Related works: various reachability labelings</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./example_graphs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Example directed graphs</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./reachability_index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reachability index</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./levels.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Topological levels</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./interval_labels.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">DFS Intervals Labelling</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./reach.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reachability queries</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./git.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Extracting commit graphs from Git repositories</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./checkpoint.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Checkpointing</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./datasets.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Graph datasets</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./repos.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Large Git repositories</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./evaluation.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Reachability evaluation</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./a.09_git_explore.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exploring extraction of commit graphs from Git repositories, and examining their shape and stats</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#load-example-commit-graph-compute-reachability-queries-save-results" id="toc-load-example-commit-graph-compute-reachability-queries-save-results" class="nav-link active" data-scroll-target="#load-example-commit-graph-compute-reachability-queries-save-results">Load example commit graph, compute reachability queries, save results</a></li>
+  <li><a href="#n2-connectivity-on-random-sample-of-commits-nodes" id="toc-n2-connectivity-on-random-sample-of-commits-nodes" class="nav-link" data-scroll-target="#n2-connectivity-on-random-sample-of-commits-nodes">N^2 connectivity on random sample of commits / nodes</a>
+  <ul class="collapse">
+  <li><a href="#false-positives-for-backward-topological-levels-negative-cut" id="toc-false-positives-for-backward-topological-levels-negative-cut" class="nav-link" data-scroll-target="#false-positives-for-backward-topological-levels-negative-cut">False positives for backward topological levels (negative cut)</a></li>
+  <li><a href="#false-negatives-for-dfs-tree-interval-labels-positive-cut" id="toc-false-negatives-for-dfs-tree-interval-labels-positive-cut" class="nav-link" data-scroll-target="#false-negatives-for-dfs-tree-interval-labels-positive-cut">False negatives for DFS tree interval labels (positive cut)</a></li>
+  <li><a href="#false-positives-for-dfs-inexact-graph-interval-labels-negative-cut" id="toc-false-positives-for-dfs-inexact-graph-interval-labels-negative-cut" class="nav-link" data-scroll-target="#false-positives-for-dfs-inexact-graph-interval-labels-negative-cut">False positives for DFS inexact graph interval labels (negative cut)</a></li>
+  <li><a href="#summary-of-findings" id="toc-summary-of-findings" class="nav-link" data-scroll-target="#summary-of-findings">Summary of findings</a></li>
+  </ul></li>
+  <li><a href="#append-results-of-evaluation-to-a-file-todo" id="toc-append-results-of-evaluation-to-a-file-todo" class="nav-link" data-scroll-target="#append-results-of-evaluation-to-a-file-todo">Append results of evaluation to a file (TODO)</a></li>
+  </ul>
+<div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/issues/new" class="toc-action">Report an issue</a></p></div></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Reachability evaluation</h1>
+</div>
+
+<div>
+  <div class="description">
+    Experimental results of evaluation of how various reachability indices speed up reachability queries.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<!-- WARNING: THIS FILE WAS AUTOGENERATED! DO NOT EDIT! -->
+<p>Imports</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> networkx <span class="im">as</span> nx</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> math <span class="im">import</span> sqrt</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="load-example-commit-graph-compute-reachability-queries-save-results" class="level2">
+<h2 class="anchored" data-anchor-id="load-example-commit-graph-compute-reachability-queries-save-results">Load example commit graph, compute reachability queries, save results</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> git_commit_graph_ext.commit_graph <span class="im">import</span> _commit_graph_name, commit_graph</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> git_commit_graph_ext.checkpoint <span class="im">import</span> compute_cached_graph, compute_cached_reachability_labels, save_df_to_file</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># parameters</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>repo_url  <span class="op">=</span> <span class="st">'https://github.com/git/git.git'</span> </span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>repo_name <span class="op">=</span> <span class="st">'git'</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>graph_name <span class="op">=</span> _commit_graph_name(repo_name)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'loading the commit graph of a git repository'</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- url:   </span><span class="sc">{}</span><span class="st">'</span>.<span class="bu">format</span>(repo_url))</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- name:  </span><span class="sc">{}</span><span class="st">'</span>.<span class="bu">format</span>(repo_name))</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- graph: </span><span class="sc">{}</span><span class="st">'</span>.<span class="bu">format</span>(graph_name))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>loading the commit graph of a git repository
+- url:   https://github.com/git/git.git
+- name:  git
+- graph: git-commit_graph</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># checkpoint 1</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>graph <span class="op">=</span> compute_cached_graph(<span class="kw">lambda</span>: commit_graph(repo_url, repo_name), graph_name)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'commit graph of </span><span class="sc">{}</span><span class="st"> repository has:'</span>.<span class="bu">format</span>(repo_name))</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- nodes: </span><span class="sc">{}</span><span class="st">'</span>.<span class="bu">format</span>(graph.number_of_nodes()))</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- edges: </span><span class="sc">{}</span><span class="st">'</span>.<span class="bu">format</span>(graph.number_of_edges()))</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'</span><span class="ch">\n</span><span class="st">public attributes of retrieved/computed graph'</span>)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (attr, val) <span class="kw">in</span> graph.__dict__.items():</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> <span class="bu">isinstance</span>(val, <span class="bu">type</span>) <span class="kw">and</span> <span class="kw">not</span> attr.startswith(<span class="st">'_'</span>):</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">'- </span><span class="sc">{:s}</span><span class="st"> (</span><span class="sc">{}</span><span class="st">)'</span>.<span class="bu">format</span>(attr, <span class="bu">type</span>(val)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>commit graph of git repository has:
+- nodes: 63829
+- edges: 79664
+
+public attributes of retrieved/computed graph
+- graph (&lt;class 'dict'&gt;)
+- df_edgelist (&lt;class 'pandas.core.frame.DataFrame'&gt;)</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>graph <span class="op">=</span> compute_cached_reachability_labels(graph, graph_name)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> graph.df_nodedata</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'public attributes of retrieved/computed graph (with reachability labels):'</span>)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (attr, val) <span class="kw">in</span> graph.__dict__.items():</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> <span class="bu">isinstance</span>(val, <span class="bu">type</span>) <span class="kw">and</span> <span class="kw">not</span> attr.startswith(<span class="st">'_'</span>):</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">'- </span><span class="sc">{:s}</span><span class="st"> (</span><span class="sc">{}</span><span class="st">)'</span>.<span class="bu">format</span>(attr, <span class="bu">type</span>(val)))</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">''</span>)</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'node data dataframe properties:'</span>)</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- columns: </span><span class="sc">{}</span><span class="st">'</span>.<span class="bu">format</span>(df.columns.tolist()))</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- rows:    </span><span class="sc">{}</span><span class="st">...'</span>.<span class="bu">format</span>(<span class="bu">list</span>(graph.nodes)[<span class="dv">0</span>:<span class="dv">5</span>]))</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- lvls:    </span><span class="sc">{}</span><span class="st">...'</span>.<span class="bu">format</span>({k: graph.lvl[k] <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">list</span>(graph.lvl)[:<span class="dv">5</span>]}))</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- mpi_ext: </span><span class="sc">{}</span><span class="st">...'</span>.<span class="bu">format</span>({k: graph.mpi_ext[k] <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">list</span>(graph.mpi_ext)[:<span class="dv">2</span>]}))</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>graph.df_nodedata.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>public attributes of retrieved/computed graph (with reachability labels):
+- graph (&lt;class 'dict'&gt;)
+- df_edgelist (&lt;class 'pandas.core.frame.DataFrame'&gt;)
+- df_nodedata (&lt;class 'pandas.core.frame.DataFrame'&gt;)
+- lvl (&lt;class 'dict'&gt;)
+- mpi_ext (&lt;class 'dict'&gt;)
+- nodes (&lt;class 'networkx.classes.reportviews.NodeView'&gt;)
+
+node data dataframe properties:
+- columns: ['f_min', 'min', 'post', 'level', 'in degree', 'out degree', 'degree']
+- rows:    ['836aadd78', 'a93475d10', '55fce44a3', 'df525e622', '6d9d59c31']...
+- lvls:    {'e83c51633': 0, '8bc9a0c76': 1, 'e497ea2a9': 2, 'bf0c6e839': 3, '19b2860cb': 4}...
+- mpi_ext: {'e83c51633': {'f_min': 1, 'min': 1, 'post': 1}, '8bc9a0c76': {'f_min': 1, 'min': 1, 'post': 2}}...</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">f_min</th>
+<th data-quarto-table-cell-role="th">min</th>
+<th data-quarto-table-cell-role="th">post</th>
+<th data-quarto-table-cell-role="th">level</th>
+<th data-quarto-table-cell-role="th">in degree</th>
+<th data-quarto-table-cell-role="th">out degree</th>
+<th data-quarto-table-cell-role="th">degree</th>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">node</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">e83c51633</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+<td>1</td>
+<td>0</td>
+<td>1</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">8bc9a0c76</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">e497ea2a9</td>
+<td>1</td>
+<td>1</td>
+<td>3</td>
+<td>2</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">bf0c6e839</td>
+<td>1</td>
+<td>1</td>
+<td>4</td>
+<td>3</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">19b2860cb</td>
+<td>1</td>
+<td>1</td>
+<td>5</td>
+<td>4</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+</section>
+<section id="n2-connectivity-on-random-sample-of-commits-nodes" class="level2">
+<h2 class="anchored" data-anchor-id="n2-connectivity-on-random-sample-of-commits-nodes">N^2 connectivity on random sample of commits / nodes</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>n_nodes <span class="op">=</span> graph.number_of_nodes()</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'graph "</span><span class="sc">{}</span><span class="st">" has </span><span class="sc">{:d}</span><span class="st"> nodes'</span>.<span class="bu">format</span>(graph_name, n_nodes))</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>n_pairs <span class="op">=</span> <span class="dv">10000</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- selecting </span><span class="sc">{:d}</span><span class="st"> pairs of nodes out of </span><span class="sc">{}</span><span class="st">'</span>.<span class="bu">format</span>(n_pairs, n_nodes<span class="op">*</span>n_nodes))</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>choice_u <span class="op">=</span> np.random.choice(n_nodes, n_pairs)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>choice_v <span class="op">=</span> np.random.choice(n_nodes, n_pairs)</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>conn_choice <span class="op">=</span> <span class="bu">list</span>(<span class="bu">zip</span>(choice_u, choice_v))</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- choice: </span><span class="sc">{}</span><span class="st">...'</span>.<span class="bu">format</span>(conn_choice[:<span class="dv">5</span>]))</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- creating a mapping from numbers to node names'</span>)</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>nodes_dict <span class="op">=</span> {num: v <span class="cf">for</span> (num,v) <span class="kw">in</span> <span class="bu">enumerate</span>(<span class="bu">list</span>(graph))}</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>conn_nodes <span class="op">=</span> [(nodes_dict[u], nodes_dict[v]) <span class="cf">for</span> (u,v) <span class="kw">in</span> conn_choice]</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- </span><span class="sc">%4d</span><span class="st"> sample size'</span> <span class="op">%</span> <span class="bu">len</span>(conn_nodes))</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- node pairs: </span><span class="sc">{}</span><span class="st">...'</span>.<span class="bu">format</span>(conn_nodes[:<span class="dv">5</span>]))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>graph "git-commit_graph" has 63829 nodes
+- selecting 10000 pairs of nodes out of 4074141241
+- choice: [(54306, 8405), (63370, 27936), (40309, 45188), (33813, 2815), (32667, 23583)]...
+- creating a mapping from numbers to node names
+- 10000 sample size
+- node pairs: [('c7f34c180', '23c204455'), ('9dc527adb', '53ec551c8'), ('5e3ce663b', '9affecbc8'), ('6440fdbab', 'c8c35f6a0'), ('f1a7082f2', 'caac7a3ab')]...</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>conn_sample <span class="op">=</span> []</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'sample of </span><span class="sc">{:d}</span><span class="st"> node pairs in </span><span class="sc">{}</span><span class="st"> graph'</span>.<span class="bu">format</span>(<span class="bu">len</span>(conn_nodes), graph_name))</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (u,v) <span class="kw">in</span> conn_nodes:</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">#print('%r -&gt; %r: %r' % (u, v, nx.has_path(linux_graph_full, u, v)))</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  conn_sample.append({<span class="st">'u'</span>: u, <span class="st">'v'</span>: v,</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>                      <span class="st">'l_u'</span>: graph.lvl[u],</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>                      <span class="st">'l_v'</span>: graph.lvl[v],</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>                      <span class="st">'u-&gt;v'</span>: nx.has_path(graph, u, v)})</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>conn_sample[:<span class="dv">5</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>sample of 10000 node pairs in git-commit_graph graph
+Wall time: 3min 26s</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre><code>[{'u': 'c7f34c180',
+  'v': '23c204455',
+  'l_u': 5579,
+  'l_v': 19392,
+  'u-&gt;v': False},
+ {'u': '9dc527adb', 'v': '53ec551c8', 'l_u': 433, 'l_v': 12473, 'u-&gt;v': False},
+ {'u': '5e3ce663b', 'v': '9affecbc8', 'l_u': 11072, 'l_v': 9538, 'u-&gt;v': True},
+ {'u': '6440fdbab',
+  'v': 'c8c35f6a0',
+  'l_u': 12391,
+  'l_v': 20919,
+  'u-&gt;v': False},
+ {'u': 'f1a7082f2',
+  'v': 'caac7a3ab',
+  'l_u': 12813,
+  'l_v': 15628,
+  'u-&gt;v': False}]</code></pre>
+</div>
+</div>
+<p>Wall time: 3min 5s</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>conn_sample_df <span class="op">=</span> pd.DataFrame.from_records(conn_sample)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>conn_sample_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">u</th>
+<th data-quarto-table-cell-role="th">v</th>
+<th data-quarto-table-cell-role="th">l_u</th>
+<th data-quarto-table-cell-role="th">l_v</th>
+<th data-quarto-table-cell-role="th">u-&gt;v</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>c7f34c180</td>
+<td>23c204455</td>
+<td>5579</td>
+<td>19392</td>
+<td>False</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>9dc527adb</td>
+<td>53ec551c8</td>
+<td>433</td>
+<td>12473</td>
+<td>False</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>5e3ce663b</td>
+<td>9affecbc8</td>
+<td>11072</td>
+<td>9538</td>
+<td>True</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>6440fdbab</td>
+<td>c8c35f6a0</td>
+<td>12391</td>
+<td>20919</td>
+<td>False</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>f1a7082f2</td>
+<td>caac7a3ab</td>
+<td>12813</td>
+<td>15628</td>
+<td>False</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">9995</td>
+<td>9be24a30d</td>
+<td>26b59b481</td>
+<td>1769</td>
+<td>11394</td>
+<td>False</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">9996</td>
+<td>2a7453241</td>
+<td>80a14665b</td>
+<td>11757</td>
+<td>13769</td>
+<td>False</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">9997</td>
+<td>577ed5c20</td>
+<td>a75ef3ff9</td>
+<td>4435</td>
+<td>17803</td>
+<td>False</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">9998</td>
+<td>6f5c77a11</td>
+<td>81811a74b</td>
+<td>17947</td>
+<td>288</td>
+<td>True</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">9999</td>
+<td>c3a3db7d4</td>
+<td>557c5895c</td>
+<td>20960</td>
+<td>20011</td>
+<td>True</td>
+</tr>
+</tbody>
+</table>
+
+<p>10000 rows × 5 columns</p>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>conn_sample_df[<span class="st">'v-&gt;u'</span>] <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>mask <span class="op">=</span> <span class="op">~</span>conn_sample_df[<span class="st">'u-&gt;v'</span>]</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>conn_sample_df.loc[mask, <span class="st">'v-&gt;u'</span>] <span class="op">=</span> <span class="op">\</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    conn_sample_df[mask].<span class="bu">apply</span>(<span class="kw">lambda</span> row: nx.has_path(graph, row[<span class="st">'v'</span>], row[<span class="st">'u'</span>]), axis<span class="op">=</span><span class="st">'columns'</span>)</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>conn_sample_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Wall time: 40.7 s</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">u</th>
+<th data-quarto-table-cell-role="th">v</th>
+<th data-quarto-table-cell-role="th">l_u</th>
+<th data-quarto-table-cell-role="th">l_v</th>
+<th data-quarto-table-cell-role="th">u-&gt;v</th>
+<th data-quarto-table-cell-role="th">v-&gt;u</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>c7f34c180</td>
+<td>23c204455</td>
+<td>5579</td>
+<td>19392</td>
+<td>False</td>
+<td>True</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>9dc527adb</td>
+<td>53ec551c8</td>
+<td>433</td>
+<td>12473</td>
+<td>False</td>
+<td>True</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>5e3ce663b</td>
+<td>9affecbc8</td>
+<td>11072</td>
+<td>9538</td>
+<td>True</td>
+<td>False</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>6440fdbab</td>
+<td>c8c35f6a0</td>
+<td>12391</td>
+<td>20919</td>
+<td>False</td>
+<td>True</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>f1a7082f2</td>
+<td>caac7a3ab</td>
+<td>12813</td>
+<td>15628</td>
+<td>False</td>
+<td>True</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">9995</td>
+<td>9be24a30d</td>
+<td>26b59b481</td>
+<td>1769</td>
+<td>11394</td>
+<td>False</td>
+<td>False</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">9996</td>
+<td>2a7453241</td>
+<td>80a14665b</td>
+<td>11757</td>
+<td>13769</td>
+<td>False</td>
+<td>True</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">9997</td>
+<td>577ed5c20</td>
+<td>a75ef3ff9</td>
+<td>4435</td>
+<td>17803</td>
+<td>False</td>
+<td>True</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">9998</td>
+<td>6f5c77a11</td>
+<td>81811a74b</td>
+<td>17947</td>
+<td>288</td>
+<td>True</td>
+<td>False</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">9999</td>
+<td>c3a3db7d4</td>
+<td>557c5895c</td>
+<td>20960</td>
+<td>20011</td>
+<td>True</td>
+<td>False</td>
+</tr>
+</tbody>
+</table>
+
+<p>10000 rows × 6 columns</p>
+</div>
+</div>
+</div>
+<p>Wall time 41.7 s (for computing v-&gt;u)</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>sample_size <span class="op">=</span> conn_sample_df[<span class="st">'u-&gt;v'</span>].count()</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>ppos_size <span class="op">=</span> conn_sample_df[conn_sample_df[<span class="st">'u-&gt;v'</span>] <span class="op">|</span> conn_sample_df[<span class="st">'v-&gt;u'</span>]][<span class="st">'u-&gt;v'</span>].count()</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>nneg_size <span class="op">=</span> conn_sample_df[<span class="op">~</span>conn_sample_df[<span class="st">'u-&gt;v'</span>] <span class="op">&amp;</span> <span class="op">~</span>conn_sample_df[<span class="st">'v-&gt;u'</span>]][<span class="st">'u-&gt;v'</span>].count()</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'there were </span><span class="sc">{:4d}</span><span class="st"> out of </span><span class="sc">{:d}</span><span class="st"> (</span><span class="sc">{:5.2f}</span><span class="st"> %) nodes for which have neither u-&gt;v nor v-&gt;u'</span>.</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>      <span class="bu">format</span>(nneg_size, sample_size, <span class="fl">100.0</span><span class="op">*</span>nneg_size<span class="op">/</span>sample_size))</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'there were </span><span class="sc">{:4d}</span><span class="st"> out of </span><span class="sc">{:d}</span><span class="st"> (</span><span class="sc">{:5.2f}</span><span class="st"> %) nodes for which have  either u-&gt;v  or v-&gt;u'</span>.</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>      <span class="bu">format</span>(ppos_size, sample_size, <span class="fl">100.0</span><span class="op">*</span>ppos_size<span class="op">/</span>sample_size))</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'together </span><span class="sc">{:4d}</span><span class="st"> + </span><span class="sc">{:4d}</span><span class="st"> = </span><span class="sc">{:d}</span><span class="st"> vs </span><span class="sc">{:d}</span><span class="st">'</span>.</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>      <span class="bu">format</span>(nneg_size, ppos_size, nneg_size <span class="op">+</span> ppos_size, sample_size))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>there were  918 out of 10000 ( 9.18 %) nodes for which have neither u-&gt;v nor v-&gt;u
+there were 9082 out of 10000 (90.82 %) nodes for which have  either u-&gt;v  or v-&gt;u
+together  918 + 9082 = 10000 vs 10000</code></pre>
+</div>
+</div>
+<section id="false-positives-for-backward-topological-levels-negative-cut" class="level3">
+<h3 class="anchored" data-anchor-id="false-positives-for-backward-topological-levels-negative-cut">False positives for backward topological levels (negative cut)</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>sample_size <span class="op">=</span> conn_sample_df[<span class="st">'u-&gt;v'</span>].count()</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'connected:        </span><span class="sc">%d</span><span class="st"> of </span><span class="sc">%d</span><span class="st"> (</span><span class="sc">%g</span><span class="st"> +/- </span><span class="sc">%g</span><span class="st">)'</span> <span class="op">%</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>      (conn_sample_df[<span class="st">'u-&gt;v'</span>].<span class="bu">sum</span>(),</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'u-&gt;v'</span>].count(),</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'u-&gt;v'</span>].mean(),</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'u-&gt;v'</span>].std()<span class="op">/</span>sqrt(sample_size)))</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>conn_sample_df[<span class="st">'l_v&lt;l_u'</span>]<span class="op">=</span>conn_sample_df[<span class="st">'l_v'</span>]<span class="op">&lt;</span>conn_sample_df[<span class="st">'l_u'</span>]</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>conn_sample_df[<span class="st">'l_v&gt;l_u'</span>]<span class="op">=</span>conn_sample_df[<span class="st">'l_v'</span>]<span class="op">&gt;</span>conn_sample_df[<span class="st">'l_u'</span>]</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'levels l_u &lt; l_v: </span><span class="sc">%d</span><span class="st"> (</span><span class="sc">%g</span><span class="st"> +/- </span><span class="sc">%g</span><span class="st">)'</span> <span class="op">%</span></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>      (conn_sample_df[<span class="st">'l_v&lt;l_u'</span>].<span class="bu">sum</span>(),</span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'l_v&lt;l_u'</span>].mean(),</span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'l_v&lt;l_u'</span>].std()<span class="op">/</span>sqrt(sample_size)))</span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'levels l_u &gt; l_v: </span><span class="sc">%d</span><span class="st"> (</span><span class="sc">%g</span><span class="st"> +/- </span><span class="sc">%g</span><span class="st">)'</span> <span class="op">%</span></span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>      (conn_sample_df[<span class="st">'l_v&gt;l_u'</span>].<span class="bu">sum</span>(),</span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'l_v&gt;l_u'</span>].mean(),</span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'l_v&gt;l_u'</span>].std()<span class="op">/</span>sqrt(sample_size)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>connected:        4515 of 10000 (0.4515 +/- 0.00497667)
+levels l_u &lt; l_v: 4960 (0.496 +/- 0.00500009)
+levels l_u &gt; l_v: 5038 (0.5038 +/- 0.00500011)</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>conn_sample_df[<span class="st">'!u-&gt;v'</span>] <span class="op">=</span> <span class="op">~</span>conn_sample_df[<span class="st">'u-&gt;v'</span>]</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>conn_sample_df[<span class="st">'fp_levels'</span>] <span class="op">=</span> conn_sample_df[<span class="st">'l_v&lt;l_u'</span>] <span class="op">&amp;</span> conn_sample_df[<span class="st">'!u-&gt;v'</span>]</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'level: false positives </span><span class="sc">%d</span><span class="st"> out of </span><span class="sc">%d</span><span class="st"> negative queries (</span><span class="sc">%g</span><span class="st"> </span><span class="sc">%%</span><span class="st">), out of </span><span class="sc">%d</span><span class="st"> total'</span> <span class="op">%</span></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>      (conn_sample_df[<span class="st">'fp_levels'</span>].<span class="bu">sum</span>(),</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'!u-&gt;v'</span>].<span class="bu">sum</span>(),</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>       <span class="fl">100.0</span><span class="op">*</span>conn_sample_df[<span class="st">'fp_levels'</span>].<span class="bu">sum</span>()<span class="op">/</span>conn_sample_df[<span class="st">'!u-&gt;v'</span>].<span class="bu">sum</span>(),</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'!u-&gt;v'</span>].count()))</span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>conn_sample_df[<span class="st">'fp_levels'</span>].describe()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>level: false positives 445 out of 5485 negative queries (8.11304 %), out of 10000 total</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre><code>count     10000
+unique        2
+top       False
+freq       9555
+Name: fp_levels, dtype: object</code></pre>
+</div>
+</div>
+</section>
+<section id="false-negatives-for-dfs-tree-interval-labels-positive-cut" class="level3">
+<h3 class="anchored" data-anchor-id="false-negatives-for-dfs-tree-interval-labels-positive-cut">False negatives for DFS tree interval labels (positive cut)</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'sample of </span><span class="sc">{:d}</span><span class="st"> node pairs in </span><span class="sc">{}</span><span class="st"> graph'</span>.<span class="bu">format</span>(<span class="bu">len</span>(conn_nodes), graph_name))</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> conn <span class="kw">in</span> conn_sample:</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>    u <span class="op">=</span> conn[<span class="st">'u'</span>]</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>    v <span class="op">=</span> conn[<span class="st">'v'</span>]</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>    conn[<span class="st">'min(u)'</span>] <span class="op">=</span> graph.mpi_ext[u][<span class="st">'min'</span>]</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>    conn[<span class="st">'min(v)'</span>] <span class="op">=</span> graph.mpi_ext[v][<span class="st">'min'</span>]</span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>    conn[<span class="st">'f_min(u)'</span>] <span class="op">=</span> graph.mpi_ext[u][<span class="st">'f_min'</span>]</span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>    conn[<span class="st">'f_min(v)'</span>] <span class="op">=</span> graph.mpi_ext[v][<span class="st">'f_min'</span>]</span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a>    conn[<span class="st">'post(u)'</span>] <span class="op">=</span> graph.mpi_ext[u][<span class="st">'post'</span>]</span>
+<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a>    conn[<span class="st">'post(v)'</span>] <span class="op">=</span> graph.mpi_ext[v][<span class="st">'post'</span>]</span>
+<span id="cb28-11"><a href="#cb28-11" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb28-12"><a href="#cb28-12" aria-hidden="true" tabindex="-1"></a>conn_sample[<span class="dv">0</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>sample of 10000 node pairs in git-commit_graph graph</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre><code>{'u': 'c7f34c180',
+ 'v': '23c204455',
+ 'l_u': 5579,
+ 'l_v': 19392,
+ 'u-&gt;v': False,
+ 'min(u)': 9555,
+ 'min(v)': 55543,
+ 'f_min(u)': 1,
+ 'f_min(v)': 1,
+ 'post(u)': 9555,
+ 'post(v)': 55545}</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>conn_sample_df_part_2 <span class="op">=</span> pd.DataFrame.from_records(conn_sample, columns<span class="op">=</span>[<span class="st">'u'</span>,<span class="st">'v'</span>,</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>                                                                        <span class="st">'min(u)'</span>,<span class="st">'min(v)'</span>,</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>                                                                        <span class="st">'f_min(u)'</span>,<span class="st">'f_min(v)'</span>,</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>                                                                        <span class="st">'post(u)'</span>,<span class="st">'post(v)'</span>])</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>conn_sample_df_part_1 <span class="op">=</span> conn_sample_df</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>conn_sample_df <span class="op">=</span> pd.merge(conn_sample_df_part_1, conn_sample_df_part_2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>conn_sample_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">u</th>
+<th data-quarto-table-cell-role="th">v</th>
+<th data-quarto-table-cell-role="th">l_u</th>
+<th data-quarto-table-cell-role="th">l_v</th>
+<th data-quarto-table-cell-role="th">u-&gt;v</th>
+<th data-quarto-table-cell-role="th">v-&gt;u</th>
+<th data-quarto-table-cell-role="th">l_v&lt;l_u</th>
+<th data-quarto-table-cell-role="th">l_v&gt;l_u</th>
+<th data-quarto-table-cell-role="th">!u-&gt;v</th>
+<th data-quarto-table-cell-role="th">fp_levels</th>
+<th data-quarto-table-cell-role="th">min(u)</th>
+<th data-quarto-table-cell-role="th">min(v)</th>
+<th data-quarto-table-cell-role="th">f_min(u)</th>
+<th data-quarto-table-cell-role="th">f_min(v)</th>
+<th data-quarto-table-cell-role="th">post(u)</th>
+<th data-quarto-table-cell-role="th">post(v)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>c7f34c180</td>
+<td>23c204455</td>
+<td>5579</td>
+<td>19392</td>
+<td>False</td>
+<td>True</td>
+<td>False</td>
+<td>True</td>
+<td>True</td>
+<td>False</td>
+<td>9555</td>
+<td>55543</td>
+<td>1</td>
+<td>1</td>
+<td>9555</td>
+<td>55545</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>9dc527adb</td>
+<td>53ec551c8</td>
+<td>433</td>
+<td>12473</td>
+<td>False</td>
+<td>True</td>
+<td>False</td>
+<td>True</td>
+<td>True</td>
+<td>False</td>
+<td>1</td>
+<td>35785</td>
+<td>1</td>
+<td>1</td>
+<td>459</td>
+<td>35785</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>5e3ce663b</td>
+<td>9affecbc8</td>
+<td>11072</td>
+<td>9538</td>
+<td>True</td>
+<td>False</td>
+<td>True</td>
+<td>False</td>
+<td>False</td>
+<td>False</td>
+<td>23750</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>23770</td>
+<td>18771</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>6440fdbab</td>
+<td>c8c35f6a0</td>
+<td>12391</td>
+<td>20919</td>
+<td>False</td>
+<td>True</td>
+<td>False</td>
+<td>True</td>
+<td>True</td>
+<td>False</td>
+<td>30197</td>
+<td>61062</td>
+<td>1</td>
+<td>1</td>
+<td>30202</td>
+<td>61067</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>f1a7082f2</td>
+<td>caac7a3ab</td>
+<td>12813</td>
+<td>15628</td>
+<td>False</td>
+<td>True</td>
+<td>False</td>
+<td>True</td>
+<td>True</td>
+<td>False</td>
+<td>31397</td>
+<td>40137</td>
+<td>1</td>
+<td>1</td>
+<td>31397</td>
+<td>40150</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">9995</td>
+<td>9be24a30d</td>
+<td>26b59b481</td>
+<td>1769</td>
+<td>11394</td>
+<td>False</td>
+<td>False</td>
+<td>False</td>
+<td>True</td>
+<td>True</td>
+<td>False</td>
+<td>61749</td>
+<td>24769</td>
+<td>61749</td>
+<td>1</td>
+<td>63629</td>
+<td>24769</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">9996</td>
+<td>2a7453241</td>
+<td>80a14665b</td>
+<td>11757</td>
+<td>13769</td>
+<td>False</td>
+<td>True</td>
+<td>False</td>
+<td>True</td>
+<td>True</td>
+<td>False</td>
+<td>26221</td>
+<td>33668</td>
+<td>1</td>
+<td>1</td>
+<td>26221</td>
+<td>33668</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">9997</td>
+<td>577ed5c20</td>
+<td>a75ef3ff9</td>
+<td>4435</td>
+<td>17803</td>
+<td>False</td>
+<td>True</td>
+<td>False</td>
+<td>True</td>
+<td>True</td>
+<td>False</td>
+<td>7255</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>7255</td>
+<td>48215</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">9998</td>
+<td>6f5c77a11</td>
+<td>81811a74b</td>
+<td>17947</td>
+<td>288</td>
+<td>True</td>
+<td>False</td>
+<td>True</td>
+<td>False</td>
+<td>False</td>
+<td>False</td>
+<td>49000</td>
+<td>14402</td>
+<td>1</td>
+<td>799</td>
+<td>49000</td>
+<td>14407</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">9999</td>
+<td>c3a3db7d4</td>
+<td>557c5895c</td>
+<td>20960</td>
+<td>20011</td>
+<td>True</td>
+<td>False</td>
+<td>True</td>
+<td>False</td>
+<td>False</td>
+<td>False</td>
+<td>61372</td>
+<td>57434</td>
+<td>1</td>
+<td>1</td>
+<td>61380</td>
+<td>57441</td>
+</tr>
+</tbody>
+</table>
+
+<p>10000 rows × 16 columns</p>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'connected u-&gt;v:   </span><span class="sc">%d</span><span class="st"> of </span><span class="sc">%d</span><span class="st"> (</span><span class="sc">%g</span><span class="st">)'</span> <span class="op">%</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>      (conn_sample_df[<span class="st">'u-&gt;v'</span>].<span class="bu">sum</span>(),</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'u-&gt;v'</span>].count(),</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'u-&gt;v'</span>].mean()))</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>conn_sample_df[<span class="st">'s_u &lt;= v'</span>]<span class="op">=</span>conn_sample_df[<span class="st">'min(u)'</span>] <span class="op">&lt;=</span> conn_sample_df[<span class="st">'post(v)'</span>]</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>conn_sample_df[<span class="st">'e_u &gt;= v'</span>]<span class="op">=</span>conn_sample_df[<span class="st">'post(v)'</span>] <span class="op">&lt;=</span> conn_sample_df[<span class="st">'post(u)'</span>]</span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>conn_sample_df[<span class="st">'v in [s_u,e_u]'</span>]<span class="op">=</span>conn_sample_df[<span class="st">'s_u &lt;= v'</span>] <span class="op">&amp;</span> conn_sample_df[<span class="st">'e_u &gt;= v'</span>]</span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'intervals u-~-&gt;v: </span><span class="sc">%d</span><span class="st"> of </span><span class="sc">%d</span><span class="st"> (</span><span class="sc">%g</span><span class="st">)'</span> <span class="op">%</span></span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>      (conn_sample_df[<span class="st">'v in [s_u,e_u]'</span>].<span class="bu">sum</span>(),</span>
+<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'v in [s_u,e_u]'</span>].count(),</span>
+<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'v in [s_u,e_u]'</span>].mean()))</span>
+<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a>conn_sample_df.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>connected u-&gt;v:   4515 of 10000 (0.4515)
+intervals u-~-&gt;v: 1217 of 10000 (0.1217)</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">u</th>
+<th data-quarto-table-cell-role="th">v</th>
+<th data-quarto-table-cell-role="th">l_u</th>
+<th data-quarto-table-cell-role="th">l_v</th>
+<th data-quarto-table-cell-role="th">u-&gt;v</th>
+<th data-quarto-table-cell-role="th">v-&gt;u</th>
+<th data-quarto-table-cell-role="th">l_v&lt;l_u</th>
+<th data-quarto-table-cell-role="th">l_v&gt;l_u</th>
+<th data-quarto-table-cell-role="th">!u-&gt;v</th>
+<th data-quarto-table-cell-role="th">fp_levels</th>
+<th data-quarto-table-cell-role="th">min(u)</th>
+<th data-quarto-table-cell-role="th">min(v)</th>
+<th data-quarto-table-cell-role="th">f_min(u)</th>
+<th data-quarto-table-cell-role="th">f_min(v)</th>
+<th data-quarto-table-cell-role="th">post(u)</th>
+<th data-quarto-table-cell-role="th">post(v)</th>
+<th data-quarto-table-cell-role="th">s_u &lt;= v</th>
+<th data-quarto-table-cell-role="th">e_u &gt;= v</th>
+<th data-quarto-table-cell-role="th">v in [s_u,e_u]</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>c7f34c180</td>
+<td>23c204455</td>
+<td>5579</td>
+<td>19392</td>
+<td>False</td>
+<td>True</td>
+<td>False</td>
+<td>True</td>
+<td>True</td>
+<td>False</td>
+<td>9555</td>
+<td>55543</td>
+<td>1</td>
+<td>1</td>
+<td>9555</td>
+<td>55545</td>
+<td>True</td>
+<td>False</td>
+<td>False</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>9dc527adb</td>
+<td>53ec551c8</td>
+<td>433</td>
+<td>12473</td>
+<td>False</td>
+<td>True</td>
+<td>False</td>
+<td>True</td>
+<td>True</td>
+<td>False</td>
+<td>1</td>
+<td>35785</td>
+<td>1</td>
+<td>1</td>
+<td>459</td>
+<td>35785</td>
+<td>True</td>
+<td>False</td>
+<td>False</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>5e3ce663b</td>
+<td>9affecbc8</td>
+<td>11072</td>
+<td>9538</td>
+<td>True</td>
+<td>False</td>
+<td>True</td>
+<td>False</td>
+<td>False</td>
+<td>False</td>
+<td>23750</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>23770</td>
+<td>18771</td>
+<td>False</td>
+<td>True</td>
+<td>False</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>6440fdbab</td>
+<td>c8c35f6a0</td>
+<td>12391</td>
+<td>20919</td>
+<td>False</td>
+<td>True</td>
+<td>False</td>
+<td>True</td>
+<td>True</td>
+<td>False</td>
+<td>30197</td>
+<td>61062</td>
+<td>1</td>
+<td>1</td>
+<td>30202</td>
+<td>61067</td>
+<td>True</td>
+<td>False</td>
+<td>False</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>f1a7082f2</td>
+<td>caac7a3ab</td>
+<td>12813</td>
+<td>15628</td>
+<td>False</td>
+<td>True</td>
+<td>False</td>
+<td>True</td>
+<td>True</td>
+<td>False</td>
+<td>31397</td>
+<td>40137</td>
+<td>1</td>
+<td>1</td>
+<td>31397</td>
+<td>40150</td>
+<td>True</td>
+<td>False</td>
+<td>False</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>conn_sample_df[<span class="st">'fn_intervals'</span>] <span class="op">=</span> conn_sample_df[<span class="st">'u-&gt;v'</span>] <span class="op">&amp;</span> <span class="op">~</span>conn_sample_df[<span class="st">'v in [s_u,e_u]'</span>]</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'intervals: true positives  </span><span class="sc">%d</span><span class="st"> out of </span><span class="sc">%d</span><span class="st"> positive queries (</span><span class="sc">%g</span><span class="st"> </span><span class="sc">%%</span><span class="st">)'</span> <span class="op">%</span></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>      (conn_sample_df[<span class="st">'v in [s_u,e_u]'</span>].<span class="bu">sum</span>(),</span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'u-&gt;v'</span>].<span class="bu">sum</span>(),</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>       <span class="fl">100.0</span><span class="op">*</span>conn_sample_df[<span class="st">'v in [s_u,e_u]'</span>].<span class="bu">sum</span>()<span class="op">/</span>conn_sample_df[<span class="st">'u-&gt;v'</span>].<span class="bu">sum</span>()))</span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'intervals: false negatives </span><span class="sc">%d</span><span class="st"> out of </span><span class="sc">%d</span><span class="st"> positive queries (</span><span class="sc">%g</span><span class="st"> </span><span class="sc">%%</span><span class="st">), out of </span><span class="sc">%d</span><span class="st"> total queries'</span> <span class="op">%</span></span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>      (conn_sample_df[<span class="st">'fn_intervals'</span>].<span class="bu">sum</span>(),</span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'u-&gt;v'</span>].<span class="bu">sum</span>(),</span>
+<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a>       <span class="fl">100.0</span><span class="op">*</span>conn_sample_df[<span class="st">'fn_intervals'</span>].<span class="bu">sum</span>()<span class="op">/</span>conn_sample_df[<span class="st">'u-&gt;v'</span>].<span class="bu">sum</span>(),</span>
+<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'u-&gt;v'</span>].count()))</span>
+<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a>conn_sample_df[<span class="st">'fn_intervals'</span>].describe()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>intervals: true positives  1217 out of 4515 positive queries (26.9546 %)
+intervals: false negatives 3298 out of 4515 positive queries (73.0454 %), out of 10000 total queries</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre><code>count     10000
+unique        2
+top       False
+freq       6702
+Name: fn_intervals, dtype: object</code></pre>
+</div>
+</div>
+</section>
+<section id="false-positives-for-dfs-inexact-graph-interval-labels-negative-cut" class="level3">
+<h3 class="anchored" data-anchor-id="false-positives-for-dfs-inexact-graph-interval-labels-negative-cut">False positives for DFS inexact graph interval labels (negative cut)</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>conn_sample_df[<span class="st">'v in [f_min(u),post(u)]'</span>] <span class="op">=</span> <span class="op">\</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>    (conn_sample_df[<span class="st">'f_min(u)'</span>] <span class="op">&lt;=</span> conn_sample_df[<span class="st">'post(v)'</span>]) <span class="op">&amp;</span> <span class="op">\</span></span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>    (conn_sample_df[<span class="st">'post(v)'</span>]  <span class="op">&lt;=</span> conn_sample_df[<span class="st">'post(u)'</span>])</span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'graph intervals u-~-&gt;v: </span><span class="sc">%d</span><span class="st"> of </span><span class="sc">%d</span><span class="st"> (</span><span class="sc">%g</span><span class="st">)'</span> <span class="op">%</span></span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>      (conn_sample_df[<span class="st">'v in [f_min(u),post(u)]'</span>].<span class="bu">sum</span>(),</span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'v in [f_min(u),post(u)]'</span>].count(),</span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'v in [f_min(u),post(u)]'</span>].mean()))</span>
+<span id="cb38-8"><a href="#cb38-8" aria-hidden="true" tabindex="-1"></a>conn_sample_df[[<span class="st">'u'</span>,<span class="st">'v'</span>,</span>
+<span id="cb38-9"><a href="#cb38-9" aria-hidden="true" tabindex="-1"></a>                <span class="st">'f_min(u)'</span>,<span class="st">'f_min(v)'</span>,</span>
+<span id="cb38-10"><a href="#cb38-10" aria-hidden="true" tabindex="-1"></a>                <span class="st">'min(u)'</span>,<span class="st">'min(v)'</span>,</span>
+<span id="cb38-11"><a href="#cb38-11" aria-hidden="true" tabindex="-1"></a>                <span class="st">'post(u)'</span>,<span class="st">'post(v)'</span>,</span>
+<span id="cb38-12"><a href="#cb38-12" aria-hidden="true" tabindex="-1"></a>                <span class="st">'u-&gt;v'</span>,</span>
+<span id="cb38-13"><a href="#cb38-13" aria-hidden="true" tabindex="-1"></a>                <span class="st">'v in [f_min(u),post(u)]'</span>]].head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>graph intervals u-~-&gt;v: 4640 of 10000 (0.464)</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">u</th>
+<th data-quarto-table-cell-role="th">v</th>
+<th data-quarto-table-cell-role="th">f_min(u)</th>
+<th data-quarto-table-cell-role="th">f_min(v)</th>
+<th data-quarto-table-cell-role="th">min(u)</th>
+<th data-quarto-table-cell-role="th">min(v)</th>
+<th data-quarto-table-cell-role="th">post(u)</th>
+<th data-quarto-table-cell-role="th">post(v)</th>
+<th data-quarto-table-cell-role="th">u-&gt;v</th>
+<th data-quarto-table-cell-role="th">v in [f_min(u),post(u)]</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>c7f34c180</td>
+<td>23c204455</td>
+<td>1</td>
+<td>1</td>
+<td>9555</td>
+<td>55543</td>
+<td>9555</td>
+<td>55545</td>
+<td>False</td>
+<td>False</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>9dc527adb</td>
+<td>53ec551c8</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>35785</td>
+<td>459</td>
+<td>35785</td>
+<td>False</td>
+<td>False</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>5e3ce663b</td>
+<td>9affecbc8</td>
+<td>1</td>
+<td>1</td>
+<td>23750</td>
+<td>1</td>
+<td>23770</td>
+<td>18771</td>
+<td>True</td>
+<td>True</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>6440fdbab</td>
+<td>c8c35f6a0</td>
+<td>1</td>
+<td>1</td>
+<td>30197</td>
+<td>61062</td>
+<td>30202</td>
+<td>61067</td>
+<td>False</td>
+<td>False</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>f1a7082f2</td>
+<td>caac7a3ab</td>
+<td>1</td>
+<td>1</td>
+<td>31397</td>
+<td>40137</td>
+<td>31397</td>
+<td>40150</td>
+<td>False</td>
+<td>False</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>conn_sample_df[<span class="st">'fp_intervals'</span>] <span class="op">=</span> conn_sample_df[<span class="st">'!u-&gt;v'</span>] <span class="op">&amp;</span> conn_sample_df[<span class="st">'v in [f_min(u),post(u)]'</span>]</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'</span><span class="sc">%d</span><span class="st"> total queries'</span> <span class="op">%</span> conn_sample_df[<span class="st">'u-&gt;v'</span>].count())</span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'graph intervals: true negatives  </span><span class="sc">%4d</span><span class="st"> out of </span><span class="sc">%4d</span><span class="st"> negative queries (</span><span class="sc">%g</span><span class="st"> </span><span class="sc">%%</span><span class="st">)'</span> <span class="op">%</span></span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>      ((<span class="op">~</span>conn_sample_df[<span class="st">'v in [f_min(u),post(u)]'</span>]).<span class="bu">sum</span>(),</span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'!u-&gt;v'</span>].<span class="bu">sum</span>(),</span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>       <span class="fl">100.0</span><span class="op">*</span>(<span class="op">~</span>conn_sample_df[<span class="st">'v in [f_min(u),post(u)]'</span>]).<span class="bu">sum</span>()<span class="op">/</span>conn_sample_df[<span class="st">'!u-&gt;v'</span>].<span class="bu">sum</span>()))</span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'graph intervals: true negatives  </span><span class="sc">%4d</span><span class="st"> not covered by level filter'</span> <span class="op">%</span></span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a>      (<span class="op">~</span>conn_sample_df[<span class="st">'v in [f_min(u),post(u)]'</span>] <span class="op">&amp;</span> conn_sample_df[<span class="st">'l_v&lt;l_u'</span>] <span class="op">&amp;</span> conn_sample_df[<span class="st">'!u-&gt;v'</span>]).<span class="bu">sum</span>())</span>
+<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'levels:          true negatives  </span><span class="sc">%4d</span><span class="st"> not covered by graph intervals'</span> <span class="op">%</span></span>
+<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a>      (conn_sample_df[<span class="st">'l_v&gt;l_u'</span>] <span class="op">&amp;</span> conn_sample_df[<span class="st">'v in [f_min(u),post(u)]'</span>] <span class="op">&amp;</span> conn_sample_df[<span class="st">'!u-&gt;v'</span>]).<span class="bu">sum</span>())</span>
+<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-14"><a href="#cb40-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'graph intervals: false positives </span><span class="sc">%4d</span><span class="st"> out of </span><span class="sc">%4d</span><span class="st"> negative queries (</span><span class="sc">%g</span><span class="st"> </span><span class="sc">%%</span><span class="st">)'</span> <span class="op">%</span></span>
+<span id="cb40-15"><a href="#cb40-15" aria-hidden="true" tabindex="-1"></a>      (conn_sample_df[<span class="st">'fp_intervals'</span>].<span class="bu">sum</span>(),</span>
+<span id="cb40-16"><a href="#cb40-16" aria-hidden="true" tabindex="-1"></a>       conn_sample_df[<span class="st">'!u-&gt;v'</span>].<span class="bu">sum</span>(),</span>
+<span id="cb40-17"><a href="#cb40-17" aria-hidden="true" tabindex="-1"></a>       <span class="fl">100.0</span><span class="op">*</span>conn_sample_df[<span class="st">'fp_intervals'</span>].<span class="bu">sum</span>()<span class="op">/</span>conn_sample_df[<span class="st">'!u-&gt;v'</span>].<span class="bu">sum</span>()))</span>
+<span id="cb40-18"><a href="#cb40-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-19"><a href="#cb40-19" aria-hidden="true" tabindex="-1"></a>conn_sample_df[<span class="st">'fp_intervals'</span>].describe()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>10000 total queries
+graph intervals: true negatives  5360 out of 5485 negative queries (97.7211 %)
+graph intervals: true negatives   421 not covered by level filter
+levels:          true negatives   101 not covered by graph intervals
+graph intervals: false positives  125 out of 5485 negative queries (2.27894 %)</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre><code>count     10000
+unique        2
+top       False
+freq       9875
+Name: fp_intervals, dtype: object</code></pre>
+</div>
+</div>
+</section>
+<section id="summary-of-findings" class="level3">
+<h3 class="anchored" data-anchor-id="summary-of-findings">Summary of findings</h3>
+<ul>
+<li>10000 total queries</li>
+<li>number of connected nodes: 4515 out of 10000 (45.15 % = 0.4515 +/- 0.00497667)</li>
+<li>there were 918 out of 10000 ( 9.18 %) nodes for which have neither u-&gt;v nor v-&gt;u</li>
+<li>level: false positives 445 out of 5485 negative queries (8.11304 %)</li>
+<li>inexact graph intervals: false positives 125 out of 5485 negative queries (2.27894 %), or topological sort</li>
+<li>exact tree intervals: false negatives 3298 out of 4515 positive queries (73.0454 %)</li>
+</ul>
+</section>
+</section>
+<section id="append-results-of-evaluation-to-a-file-todo" class="level2">
+<h2 class="anchored" data-anchor-id="append-results-of-evaluation-to-a-file-todo">Append results of evaluation to a file (TODO)</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>df_filename <span class="op">=</span> <span class="st">'datasets/'</span> <span class="op">+</span> graph_name <span class="op">+</span> <span class="st">'-df_reachability_sample.csv.gz'</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> Path(df_filename).exists():</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'appending not implemented yet !!!'</span>)</span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'saving reachability analysis for </span><span class="sc">{}</span><span class="st"> to "</span><span class="sc">{}</span><span class="st">"'</span>.<span class="bu">format</span>(graph_name, df_filename))</span>
+<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>    save_df_to_file(conn_sample_df, df_filename)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>saving reachability analysis for git-commit_graph to "datasets/git-commit_graph-df_reachability_sample.csv.gz"</code></pre>
+</div>
+</div>
+<hr>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

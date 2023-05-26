@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.357">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Defining topological levels, and describing their characteristics">
+
+<title>git_commit_graph_ext - Topological levels</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<link rel="stylesheet" href="styles.css">
+<meta property="og:title" content="git_commit_graph_ext - Topological levels">
+<meta property="og:description" content="Defining topological levels, and describing their characteristics">
+<meta property="og:image" content="https://jnareb.github.io/git-commit-graph-ext/images/preach/PReaCH_arXiv-fig_2-forward_and_backward_topological_levels-zoom.png">
+<meta property="og:site-name" content="git_commit_graph_ext">
+<meta property="og:image:height" content="440">
+<meta property="og:image:width" content="874">
+<meta name="twitter:title" content="git_commit_graph_ext - Topological levels">
+<meta name="twitter:description" content="Defining topological levels, and describing their characteristics">
+<meta name="twitter:image" content="https://jnareb.github.io/git-commit-graph-ext/images/preach/PReaCH_arXiv-fig_2-forward_and_backward_topological_levels-zoom.png">
+<meta name="twitter:image-height" content="440">
+<meta name="twitter:image-width" content="874">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+
+<body class="nav-sidebar floating nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">git_commit_graph_ext</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools ms-auto">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+      <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./levels.html">Topological levels</a></li></ol></nav>
+      <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+      </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Commit graph labeling for speeding up Git commands</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./tools.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Graphs in Python</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./related.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Related works: various reachability labelings</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./example_graphs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Example directed graphs</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./reachability_index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reachability index</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./levels.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Topological levels</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./interval_labels.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">DFS Intervals Labelling</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./reach.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reachability queries</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./git.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Extracting commit graphs from Git repositories</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./checkpoint.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Checkpointing</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./datasets.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Graph datasets</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./repos.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Large Git repositories</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reachability evaluation</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./a.09_git_explore.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exploring extraction of commit graphs from Git repositories, and examining their shape and stats</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#definition-of-forward-and-backward-topological-levels" id="toc-definition-of-forward-and-backward-topological-levels" class="nav-link active" data-scroll-target="#definition-of-forward-and-backward-topological-levels">Definition of forward and backward topological levels</a></li>
+  <li><a href="#properties-of-topological-levels" id="toc-properties-of-topological-levels" class="nav-link" data-scroll-target="#properties-of-topological-levels">Properties of topological levels</a></li>
+  <li><a href="#computing-backward-topological-levels" id="toc-computing-backward-topological-levels" class="nav-link" data-scroll-target="#computing-backward-topological-levels">Computing backward topological levels</a>
+  <ul class="collapse">
+  <li><a href="#find_levels" id="toc-find_levels" class="nav-link" data-scroll-target="#find_levels">find_levels</a></li>
+  <li><a href="#test-find_levelsgraph" id="toc-test-find_levelsgraph" class="nav-link" data-scroll-target="#test-find_levelsgraph">Test <code>find_levels(graph)</code></a></li>
+  </ul></li>
+  </ul>
+<div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/issues/new" class="toc-action">Report an issue</a></p></div></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Topological levels</h1>
+</div>
+
+<div>
+  <div class="description">
+    Defining topological levels, and describing their characteristics
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<!-- WARNING: THIS FILE WAS AUTOGENERATED! DO NOT EDIT! -->
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>The autoreload extension is already loaded. To reload it, use:
+  %reload_ext autoreload</code></pre>
+</div>
+</div>
+<section id="definition-of-forward-and-backward-topological-levels" class="level2">
+<h2 class="anchored" data-anchor-id="definition-of-forward-and-backward-topological-levels">Definition of forward and backward topological levels</h2>
+<p>The <strong>backward topological level</strong> of a vertex <span class="math inline">\(v\)</span> (denoted as <span class="math inline">\(l_v\)</span>) can be defined as its depth: - if <span class="math inline">\(v\)</span> has no immediate predecessors (has no outgoing edges, i.e.&nbsp;its out-degree is zero - it is a <strong><em>sink</em></strong>),<br>
+then <span class="math inline">\(l_v = 0\)</span>, - otherwise it is maximum of levels of its immediate predecessors plus one:<br>
+<span class="math inline">\(l_v = \max\limits_{u\colon (v,u)\in E}(l_u)+1\)</span>.</p>
+<p>In other words it is the maximum length of any path starting from vertex <span class="math inline">\(v\)</span>.</p>
+<p>The backward topological level increases at least by one when going in the opposite direction to edges (going backwards).</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This reachability label is <em>immutable</em> with respect to the graph growth by adding nodes.</p>
+</div>
+</div>
+<hr>
+<p>The <strong>forward topological level</strong> of a vertex <span class="math inline">\(v\)</span> (denoted as <span class="math inline">\(L_v\)</span>) is defined in the following way: - if <span class="math inline">\(v\)</span> has no immediate parents / successors (it has no in-going edges, i.e.&nbsp;its in-degree is zero – it is a <strong><em>source</em></strong>),<br>
+then <span class="math inline">\(L_v = 0\)</span>, - otherwise it is maximum of forward levels of its immediate successors plus one,<br>
+that is <span class="math inline">\(L_v = \max\limits_{u\colon (u,v)\in E}(L_u + 1)\)</span></p>
+<p>In other words it is maximum length of any path ending at vertex <span class="math inline">\(v\)</span>.</p>
+<p>The forward topological level increases by at least one when going in the direction of edge (going forwards).</p>
+<p>The image below shows an example directed graph (DAG), marked with forward and backward topological levels (forward marked in green and backward marked in blue). This example is taken from the Figure 2 in the PReaCH paper.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/preach/PReaCH_arXiv-fig_2-forward_and_backward_topological_levels-zoom.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Forward and backward topological levels for an example graph</figcaption>
+</figure>
+</div>
+</section>
+<section id="properties-of-topological-levels" class="level2">
+<h2 class="anchored" data-anchor-id="properties-of-topological-levels">Properties of topological levels</h2>
+<p>The forward level <span class="math inline">\(L_v\)</span> of a vertex induces its topological ordering: if <span class="math inline">\(u\)</span> precedes <span class="math inline">\(v\)</span> in the topological ordering of DAG <span class="math inline">\(G\)</span> and <span class="math inline">\(u \neq v\)</span>, then <span class="math inline">\(L_u &lt; L_v\)</span>.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>the alternative notation for <span class="math inline">\(l_u\)</span> is <span class="math inline">\(l(u)\)</span>, and for <span class="math inline">\(L_u\)</span> is <span class="math inline">\(L(u)\)</span>.</p>
+</div>
+</div>
+<p>In other words the following observation holds:</p>
+<ul>
+<li><p>for <strong>forward topological levels</strong> (defined as having level equal 0 for <strong><em>source nodes</em></strong>): <span class="math display">\[\forall u \neq v \in V : L(u) \geq L(v) \implies u \nrightarrow v \]</span></p></li>
+<li><p>for <strong>backward topological levels</strong> (defined as having level equal 0 for <strong><em>sink nodes</em></strong>): <span class="math display">\[\forall u \neq v \in V : l(u) \leq l(v) \implies u \nrightarrow v \]</span></p></li>
+</ul>
+<p>We can also use a <em>weaker</em> condition, which has the advantage of avoiding corner cases of checking whether <span class="math inline">\(u = v\)</span> / <span class="math inline">\(u \neq v\)</span>:</p>
+<ul>
+<li><p>for <strong>forward topological levels</strong> (defined as having level equal 0 for <strong><em>source nodes</em></strong>): <span class="math display">\[\forall u \in V, v \in V : L(u) &gt; L(v) \implies u \nrightarrow v \]</span></p></li>
+<li><p>for <strong>backward topological levels</strong> (defined as having level equal 0 for <strong><em>sink nodes</em></strong>): <span class="math display">\[\forall u \in V, v \in V : l(u) &lt; l(v) \implies u \nrightarrow v \]</span></p></li>
+</ul>
+<p>It also helps in the case where newer commits do not have backward topological levels computed, and we want to use topological levels even in the case where at least one vertex in reachability query is new.</p>
+<p>All this means that both forward and backward topological levels can function as <strong>negative-cut filter</strong> (reducing the search space).</p>
+</section>
+<section id="computing-backward-topological-levels" class="level2">
+<h2 class="anchored" data-anchor-id="computing-backward-topological-levels">Computing backward topological levels</h2>
+<blockquote class="blockquote">
+<p><u>Definition:</u> The <strong>level</strong> of a vertex <span class="math inline">\(v\)</span> (denoted as <span class="math inline">\(l_v\)</span>) can be defined as its depth: if <span class="math inline">\(v\)</span> has no immediate predecessors, then <span class="math inline">\(l_v = 0\)</span>, otherwise it is maximum of levels of its immediate predecessors plus one: <span class="math display">\[l_v = \max\limits_{u\colon (v,u)\in E}(l_u)+1\]</span></p>
+</blockquote>
+<pre><code>/opt/hostedtoolcache/Python/3.9.16/x64/lib/python3.9/site-packages/fastcore/docscrape.py:225: UserWarning: Unknown section Parameters:
+  else: warn(msg)
+/opt/hostedtoolcache/Python/3.9.16/x64/lib/python3.9/site-packages/fastcore/docscrape.py:225: UserWarning: Unknown section Returns:
+  else: warn(msg)</code></pre>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/labelling/levels.py#L10" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="find_levels" class="level3">
+<h3 class="anchored" data-anchor-id="find_levels">find_levels</h3>
+<blockquote class="blockquote">
+<pre><code> find_levels (DG, attr=None)</code></pre>
+</blockquote>
+<p>Find levels (generation number) of all vertices in graph G</p>
+<p>The backward topological level of a vertex v, which we denote as l_v or l(v), can be defined as its depth, or the length of longestt path to the leaf (sink) node.</p>
+<ul>
+<li>if v has no immediate predecessors, then l_v = 0</li>
+<li>otherwise l_v = 1 + max_{u: predecessors}(l_u)</li>
+</ul>
+<p>The levels / generation number information can be optionally saved in the graph, under given node attribute (name given by <code>attr</code> parameter).</p>
+<p>NOTE: whether for nodes without outcoming edges (without any neighbours) l_v is defined to be 0, or defined to be 1, is a matter of convention. Here the same convention as in the FELINE paper is used.</p>
+<p>NOTE: for compatibility with forward topological levels sometimes backward topological levels are used with negative sign applied, like in the PReaCH paper.</p>
+</section>
+<section id="test-find_levelsgraph" class="level3">
+<h3 class="anchored" data-anchor-id="test-find_levelsgraph">Test <code>find_levels(graph)</code></h3>
+<p>Test that <code>find_levels()</code> works on known example graphs from <a href="./example_graphs.html">example_graphs</a></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># this is needed only for demonstrations</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> git_commit_graph_ext.example_graphs <span class="im">as</span> graphs</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Use the small DAG from the FELINE paper as a test</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>sd<span class="op">=</span>graphs.small_DAG_FELINE()</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>find_levels(sd)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<pre><code>{'h': 0, 'c': 1, 'd': 0, 'e': 1, 'a': 2, 'f': 1, 'g': 0, 'b': 2}</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>sd<span class="op">=</span>graphs.small_DAG_FELINE()</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>sd.lvl<span class="op">=</span>find_levels(sd)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>sd.pos<span class="op">=</span>{<span class="st">'a'</span>:(<span class="dv">2</span>,<span class="dv">3</span>),<span class="st">'b'</span>:(<span class="fl">4.5</span>,<span class="dv">3</span>),<span class="st">'c'</span>:(<span class="dv">1</span>,<span class="dv">2</span>),<span class="st">'d'</span>:(<span class="dv">2</span>,<span class="dv">2</span>),<span class="st">'e'</span>:(<span class="dv">3</span>,<span class="dv">2</span>),<span class="st">'f'</span>:(<span class="dv">4</span>,<span class="dv">2</span>),<span class="st">'g'</span>:(<span class="dv">5</span>,<span class="dv">2</span>),<span class="st">'h'</span>:(<span class="dv">3</span>,<span class="dv">1</span>)}</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx(sd, pos<span class="op">=</span>sd.pos,</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>                 with_labels<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>                 node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">2.0</span>,node_color<span class="op">=</span><span class="st">'y'</span>)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx_labels(sd, pos<span class="op">=</span>sd.pos,</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>                        labels<span class="op">=</span>sd.lvl)</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Labels denote backward topological level $l_u$'</span>)</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>plt.draw()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<p><img src="06_levels_files/figure-html/cell-6-output-1.png" class="img-fluid"></p>
+</div>
+</div>
+<p>Use the graph from Figure 9 in the FELINE paper</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>lf<span class="op">=</span>graphs.levels_DAG_FELINE()</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> find_levels(lf) <span class="op">==</span> {</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">'c'</span>:<span class="dv">0</span>,<span class="st">'g'</span>:<span class="dv">0</span>,<span class="st">'h'</span>:<span class="dv">0</span>,<span class="st">'i'</span>:<span class="dv">0</span>,</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">'d'</span>:<span class="dv">1</span>,<span class="st">'e'</span>:<span class="dv">1</span>,<span class="st">'f'</span>:<span class="dv">1</span>,</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">'a'</span>:<span class="dv">2</span>,<span class="st">'b'</span>:<span class="dv">2</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>lf<span class="op">=</span>graphs.levels_DAG_FELINE()</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co"># backward level</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>lf.lvl_expected<span class="op">=</span>{</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">'c'</span>:<span class="dv">0</span>,<span class="st">'g'</span>:<span class="dv">0</span>,<span class="st">'h'</span>:<span class="dv">0</span>,<span class="st">'i'</span>:<span class="dv">0</span>,</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">'d'</span>:<span class="dv">1</span>,<span class="st">'e'</span>:<span class="dv">1</span>,<span class="st">'f'</span>:<span class="dv">1</span>,</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">'a'</span>:<span class="dv">2</span>,<span class="st">'b'</span>:<span class="dv">2</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>lf.lvl<span class="op">=</span>find_levels(lf)</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="co"># positions of nodes</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>lf.tree<span class="op">=</span>{</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">'a'</span>:(<span class="dv">2</span>,<span class="dv">2</span>),<span class="st">'b'</span>:(<span class="dv">4</span>,<span class="dv">2</span>),</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">'d'</span>:(<span class="dv">2</span>,<span class="dv">1</span>),<span class="st">'e'</span>:(<span class="dv">3</span>,<span class="dv">1</span>),<span class="st">'f'</span>:(<span class="dv">4</span>,<span class="dv">1</span>),</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">'c'</span>:(<span class="dv">1</span>,<span class="dv">0</span>),<span class="st">'g'</span>:(<span class="dv">2</span>,<span class="dv">0</span>),<span class="st">'h'</span>:(<span class="dv">3</span>,<span class="dv">0</span>),<span class="st">'i'</span>:(<span class="dv">4</span>,<span class="dv">0</span>)</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="co"># configure plot</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a><span class="co">#plt.axis('off')</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">'backward topological level'</span>)</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a><span class="co">#plt.subplots_adjust(left=0,right=1.2)</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>plt.xlim(left<span class="op">=</span><span class="fl">0.25</span>,right<span class="op">=</span><span class="fl">4.5</span>)</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx(lf,</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>                 pos<span class="op">=</span>lf.tree,</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>                 nodelist<span class="op">=</span><span class="bu">list</span>(lf.lvl.keys()),</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>                 node_color<span class="op">=</span><span class="bu">list</span>(lf.lvl.values()),</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>                 cmap<span class="op">=</span>plt.cm.Greens,</span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>                 vmin<span class="op">=-</span><span class="dv">2</span>,vmax<span class="op">=</span><span class="dv">5</span>,</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>                 node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">2.0</span>)</span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx_labels(lf,</span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>                        pos<span class="op">=</span>{k: (v[<span class="dv">0</span>]<span class="op">-</span><span class="fl">0.3</span>,v[<span class="dv">1</span>]<span class="op">-</span><span class="fl">0.1</span>) <span class="cf">for</span> (k,v) <span class="kw">in</span> lf.tree.items()},</span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a>                        labels<span class="op">=</span>{k:<span class="st">'$l_'</span><span class="op">+</span><span class="bu">str</span>(k)<span class="op">+</span><span class="st">'='</span><span class="op">+</span><span class="bu">str</span>(l)<span class="op">+</span><span class="st">'$'</span></span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a>                                <span class="cf">for</span> (k,l) <span class="kw">in</span> lf.lvl.items()})</span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>plt.draw()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<p><img src="06_levels_files/figure-html/cell-8-output-1.png" class="img-fluid"></p>
+</div>
+</div>
+<p><strong>TODO:</strong> Interactive visualization</p>
+<hr>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

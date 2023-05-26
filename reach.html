@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.357">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Finding if one vertex in the DAG is reachable from another, with the help of various reachability indexes (labels)">
+
+<title>git_commit_graph_ext - Reachability queries</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<link rel="stylesheet" href="styles.css">
+<meta property="og:title" content="git_commit_graph_ext - Reachability queries">
+<meta property="og:description" content="Finding if one vertex in the DAG is reachable from another, with the help of various reachability indexes (labels)">
+<meta property="og:image" content="https://jnareb.github.io/git-commit-graph-ext/08_reach_files/figure-html/cell-6-output-1.png">
+<meta property="og:site-name" content="git_commit_graph_ext">
+<meta property="og:image:height" content="262">
+<meta property="og:image:width" content="349">
+<meta name="twitter:title" content="git_commit_graph_ext - Reachability queries">
+<meta name="twitter:description" content="Finding if one vertex in the DAG is reachable from another, with the help of various reachability indexes (labels)">
+<meta name="twitter:image" content="https://jnareb.github.io/git-commit-graph-ext/08_reach_files/figure-html/cell-6-output-1.png">
+<meta name="twitter:image-height" content="262">
+<meta name="twitter:image-width" content="349">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+
+<body class="nav-sidebar floating nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">git_commit_graph_ext</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools ms-auto">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+      <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./reach.html">Reachability queries</a></li></ol></nav>
+      <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+      </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Commit graph labeling for speeding up Git commands</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./tools.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Graphs in Python</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./related.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Related works: various reachability labelings</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./example_graphs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Example directed graphs</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./reachability_index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reachability index</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./levels.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Topological levels</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./interval_labels.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">DFS Intervals Labelling</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./reach.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Reachability queries</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./git.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Extracting commit graphs from Git repositories</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./checkpoint.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Checkpointing</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./datasets.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Graph datasets</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./repos.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Large Git repositories</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reachability evaluation</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./a.09_git_explore.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exploring extraction of commit graphs from Git repositories, and examining their shape and stats</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#reachability-queries-with-topological-levels-and-min-post-intervals" id="toc-reachability-queries-with-topological-levels-and-min-post-intervals" class="nav-link active" data-scroll-target="#reachability-queries-with-topological-levels-and-min-post-intervals">Reachability queries with topological levels and min-post intervals</a>
+  <ul class="collapse">
+  <li><a href="#recursive-chatty-version-levels-min-post---generic_is_reachable" id="toc-recursive-chatty-version-levels-min-post---generic_is_reachable" class="nav-link" data-scroll-target="#recursive-chatty-version-levels-min-post---generic_is_reachable">Recursive chatty version (levels + min-post) - <code>generic_is_reachable</code></a></li>
+  <li><a href="#generic_is_reachable" id="toc-generic_is_reachable" class="nav-link" data-scroll-target="#generic_is_reachable">generic_is_reachable</a></li>
+  <li><a href="#dfs-walk-version-levels-min-post---generic_is_reachable_dfs" id="toc-dfs-walk-version-levels-min-post---generic_is_reachable_dfs" class="nav-link" data-scroll-target="#dfs-walk-version-levels-min-post---generic_is_reachable_dfs">DFS walk version (levels + min-post) - <code>generic_is_reachable_dfs</code></a></li>
+  <li><a href="#generic_is_reachable_dfs" id="toc-generic_is_reachable_dfs" class="nav-link" data-scroll-target="#generic_is_reachable_dfs">generic_is_reachable_dfs</a></li>
+  <li><a href="#bfs-walk-version-actively-developed---generic_is_reachable_bfs" id="toc-bfs-walk-version-actively-developed---generic_is_reachable_bfs" class="nav-link" data-scroll-target="#bfs-walk-version-actively-developed---generic_is_reachable_bfs">BFS walk version, actively developed - <code>generic_is_reachable_bfs</code></a></li>
+  <li><a href="#generic_is_reachable_bfs" id="toc-generic_is_reachable_bfs" class="nav-link" data-scroll-target="#generic_is_reachable_bfs">generic_is_reachable_bfs</a></li>
+  <li><a href="#walk_spanning" id="toc-walk_spanning" class="nav-link" data-scroll-target="#walk_spanning">walk_spanning</a></li>
+  <li><a href="#reachable_negative_cut" id="toc-reachable_negative_cut" class="nav-link" data-scroll-target="#reachable_negative_cut">reachable_negative_cut</a></li>
+  <li><a href="#reachable_positive_cut" id="toc-reachable_positive_cut" class="nav-link" data-scroll-target="#reachable_positive_cut">reachable_positive_cut</a></li>
+  </ul></li>
+  </ul>
+<div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/issues/new" class="toc-action">Report an issue</a></p></div></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Reachability queries</h1>
+</div>
+
+<div>
+  <div class="description">
+    Finding if one vertex in the DAG is reachable from another, with the help of various reachability indexes (labels)
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<!-- WARNING: THIS FILE WAS AUTOGENERATED! DO NOT EDIT! -->
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Imports for the <code>git_commit_graph_ext.reachability</code> module generated from this notebook</p>
+<section id="reachability-queries-with-topological-levels-and-min-post-intervals" class="level2">
+<h2 class="anchored" data-anchor-id="reachability-queries-with-topological-levels-and-min-post-intervals">Reachability queries with topological levels and min-post intervals</h2>
+<p>Start with what was defined in the original Google Colab notebook, called there <code>generic_is_reachable()</code>.</p>
+<p>It will not be using FELINE index though, as it seems that this type of index is not a good fit for large commit graphs.</p>
+<section id="recursive-chatty-version-levels-min-post---generic_is_reachable" class="level3">
+<h3 class="anchored" data-anchor-id="recursive-chatty-version-levels-min-post---generic_is_reachable">Recursive chatty version (levels + min-post) - <a href="https://jnareb.github.io/git-commit-graph-ext/reach.html#generic_is_reachable"><code>generic_is_reachable</code></a></h3>
+<p>This recursive version is based on the Algorithm 3 from the FELINE paper, translated from pseudocode to Python (and NetworkX).</p>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/reachability.py#L11" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="generic_is_reachable" class="level3">
+<h3 class="anchored" data-anchor-id="generic_is_reachable">generic_is_reachable</h3>
+<blockquote class="blockquote">
+<pre><code> generic_is_reachable (DG, u, v, II=None, l=None, stats=None,
+                       verbose=None)</code></pre>
+</blockquote>
+<p>Whether in graph DG <span class="math inline">\(v\)</span> is reachable from <span class="math inline">\(u\)</span>, utilizing given indices</p>
+<p>Given (u, v) ∈ V², two vertices in the DAG given by the DG parameter, calculate r(u,v), that is whether vertex v is reachable from vertex u.</p>
+<p>This is based on the Algorithm 3 from FELINE paper, translated from pseudocode to Python (and NetworkX).</p>
+<p>NOTE: this is a straightforward recursive version of the function.</p>
+<table class="table">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 25%">
+<col style="width: 34%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th><strong>Type</strong></th>
+<th><strong>Default</strong></th>
+<th><strong>Details</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>DG</td>
+<td>NetworkX digraph</td>
+<td></td>
+<td>Directed acyclic graph.</td>
+</tr>
+<tr class="even">
+<td>u</td>
+<td>node</td>
+<td></td>
+<td>Source node.</td>
+</tr>
+<tr class="odd">
+<td>v</td>
+<td>node</td>
+<td></td>
+<td>Target node.</td>
+</tr>
+<tr class="even">
+<td>II</td>
+<td>NoneType</td>
+<td>None</td>
+<td>A dictionary with nodes as keys and min-post interval index as values<br>(2-element lists, representing intervals).</td>
+</tr>
+<tr class="odd">
+<td>l</td>
+<td>NoneType</td>
+<td>None</td>
+<td>A dictionary with nodes as keys and backward topological vertex level as values<br>(vertex level is also known as generation number).</td>
+</tr>
+<tr class="even">
+<td>stats</td>
+<td>NoneType</td>
+<td>None</td>
+<td>A dictionary gathering statistics about calls. Currently supported<br>are:<br> * ‘access’ key, counting the number of intermediate vertices it<br> checks / accesses<br> * ‘level’ key, storing list of vertices where level index cut off<br> further walk (further search)<br> * ‘walk’ key, with list of all vertices walked, in order<br> * ‘min-post’ key, storing the vertex at which positive-cut<br> min-post interval cut-off the need for further search</td>
+</tr>
+<tr class="odd">
+<td>verbose</td>
+<td>NoneType</td>
+<td>None</td>
+<td>Whether to print debugging information. If set to None (the default),<br>it prints debugging information if stats parameter is set.</td>
+</tr>
+<tr class="even">
+<td><strong>Returns</strong></td>
+<td><strong>bool</strong></td>
+<td></td>
+<td><strong>Whether v is reachable from u</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Test that everything works. For this we need example graphs, and a way to compute reachability levels</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># example graphs</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> git_commit_graph_ext.example_graphs <span class="im">as</span> graphs</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># reachability indexes</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> git_commit_graph_ext.labelling.levels <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> git_commit_graph_ext.labelling.dfs_intervals <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># plotting, for visualizations</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> networkx <span class="im">as</span> nx</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Use the example graph from the PReaCH paper for testing</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># lazy generation of the graph</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    ch</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> <span class="pp">NameError</span>:</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    ch<span class="op">=</span>graphs.RCH_graph()</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>recalculate <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> recalculate <span class="kw">or</span> <span class="kw">not</span> <span class="bu">hasattr</span>(ch, <span class="st">'lvl'</span>):</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    ch.lvl <span class="op">=</span> find_levels(ch) <span class="co"># </span><span class="al">TODO</span><span class="co">: pre-computed levels are forward levels</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> recalculate <span class="kw">or</span> <span class="kw">not</span> <span class="bu">hasattr</span>(ch, <span class="st">'mpi'</span>):</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    ch.mpi <span class="op">=</span> find_dfs_intervals(ch)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co">#print('%r' % ch)</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'graph has </span><span class="sc">{}</span><span class="st"> nodes and </span><span class="sc">{}</span><span class="st"> edges'</span>.<span class="bu">format</span>(ch.number_of_nodes(), ch.number_of_edges()))</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'nodes: </span><span class="sc">{!r}</span><span class="st">'</span>.<span class="bu">format</span>(<span class="bu">list</span>(ch.nodes())))</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'it has the following attributes:'</span>)</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (attr,val) <span class="kw">in</span> ch.__dict__.items():</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">isinstance</span>(val, <span class="bu">dict</span>) <span class="kw">and</span> <span class="kw">not</span> attr.startswith(<span class="st">'_'</span>):</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    <span class="co">#print('- %s: %r' % (attr, ch.__dict__[attr]))</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'- </span><span class="sc">%s</span><span class="st">'</span> <span class="op">%</span> attr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>graph has 17 nodes and 19 edges
+nodes: ['a', 'e', 'b', 'f', 'g', 'c', 'h', 'i', 'd', 'j', 'o', 'k', 'l', 'm', 'n', 'p', 'q']
+it has the following attributes:
+- graph
+- lvl
+- pos
+- mpi
+Wall time: 6.99 ms</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>plt.axis(<span class="st">"off"</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Example graph from PReaCH paper (Figures 1 and 2)</span><span class="ch">\n</span><span class="st">draw reversed - with arrows pointing down'</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx(ch,pos<span class="op">=</span>{key:(value[<span class="dv">0</span>],<span class="op">-</span>value[<span class="dv">1</span>]) <span class="cf">for</span> (key,value) <span class="kw">in</span> ch.pos.items()},</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>                 node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">2.0</span>,node_color<span class="op">=</span><span class="st">'#dd44ff'</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx_edges(ch,pos<span class="op">=</span>{key:(value[<span class="dv">0</span>],<span class="op">-</span>value[<span class="dv">1</span>]) <span class="cf">for</span> (key,value) <span class="kw">in</span> ch.pos.items()},</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>                       edgelist<span class="op">=</span>find_dfs_spanning(ch),</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>                       node_size<span class="op">=</span><span class="dv">500</span>,</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>                       width<span class="op">=</span><span class="fl">8.0</span>,edge_color<span class="op">=</span><span class="st">'#4444ff'</span>,alpha<span class="op">=</span><span class="fl">0.4</span>,arrowstyle<span class="op">=</span><span class="st">'-&gt;'</span>)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<p><img src="08_reach_files/figure-html/cell-6-output-1.png" class="img-fluid"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># test unreachable</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> {}</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> generic_is_reachable(ch, <span class="st">'a'</span>, <span class="st">'g'</span>, stats<span class="op">=</span>stats)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'r(</span><span class="sc">%s</span><span class="st">,</span><span class="sc">%s</span><span class="st">)=</span><span class="sc">%r</span><span class="st"> in </span><span class="sc">%d</span><span class="st"> steps (naive)</span><span class="ch">\n</span><span class="st">  </span><span class="sc">%r</span><span class="ch">\n</span><span class="st">'</span> <span class="op">%</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>      (<span class="st">'a'</span>, <span class="st">'g'</span>, result, stats[<span class="st">'access'</span>], stats))</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> {}</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> generic_is_reachable(ch, <span class="st">'a'</span>, <span class="st">'g'</span>, II<span class="op">=</span>ch.mpi, stats<span class="op">=</span>stats)</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'r(</span><span class="sc">%s</span><span class="st">,</span><span class="sc">%s</span><span class="st">)=</span><span class="sc">%r</span><span class="st"> in </span><span class="sc">%d</span><span class="st"> steps (min-post)</span><span class="ch">\n</span><span class="st">  </span><span class="sc">%r</span><span class="ch">\n</span><span class="st">'</span> <span class="op">%</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>      (<span class="st">'a'</span>, <span class="st">'g'</span>, result, stats[<span class="st">'access'</span>], stats))</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> {}</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> generic_is_reachable(ch, <span class="st">'a'</span>, <span class="st">'g'</span>, l<span class="op">=</span>ch.lvl, stats<span class="op">=</span>stats)</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'r(</span><span class="sc">%s</span><span class="st">,</span><span class="sc">%s</span><span class="st">)=</span><span class="sc">%r</span><span class="st"> in </span><span class="sc">%d</span><span class="st"> steps (level)</span><span class="ch">\n</span><span class="st">  </span><span class="sc">%r</span><span class="st">'</span> <span class="op">%</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>      (<span class="st">'a'</span>, <span class="st">'g'</span>, result, stats[<span class="st">'access'</span>], stats))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>a-&gt;['e']
+e-&gt;['j']
+j-&gt;['o', 'p']
+o-&gt;[]
+p-&gt;[]
+r(a,g)=False in 4 steps (naive)
+  {'access': 4, 'level': [], 'walk': ['a', 'e', 'j', 'o', 'p']}
+
+a-&gt;['e']
+e-&gt;['j']
+j-&gt;['o', 'p']
+o-&gt;[]
+p-&gt;[]
+r(a,g)=False in 4 steps (min-post)
+  {'access': 4, 'level': [], 'walk': ['a', 'e', 'j', 'o', 'p']}
+
+a-&gt;['e']
+e-&gt;g level cut ¬2 &lt; 2
+r(a,g)=False in 1 steps (level)
+  {'access': 1, 'level': ['e'], 'walk': ['a', 'e']}</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># test reachable</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> {}</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>u<span class="op">=</span><span class="st">'b'</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>v<span class="op">=</span><span class="st">'o'</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co">#u='c'</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="co">#v='q'</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> generic_is_reachable(ch, u, v, stats<span class="op">=</span>stats)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'r(</span><span class="sc">%s</span><span class="st">,</span><span class="sc">%s</span><span class="st">)=</span><span class="sc">%r</span><span class="st"> in </span><span class="sc">%d</span><span class="st"> steps (naive)</span><span class="ch">\n</span><span class="st">  </span><span class="sc">%r</span><span class="ch">\n</span><span class="st">'</span> <span class="op">%</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>      (u, v, result, stats[<span class="st">'access'</span>], stats))</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> {}</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> generic_is_reachable(ch, u, v, II<span class="op">=</span>ch.mpi, stats<span class="op">=</span>stats)</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'r(</span><span class="sc">%s</span><span class="st">,</span><span class="sc">%s</span><span class="st">)=</span><span class="sc">%r</span><span class="st"> in </span><span class="sc">%d</span><span class="st"> steps (min-post)</span><span class="ch">\n</span><span class="st">  </span><span class="sc">%r</span><span class="ch">\n</span><span class="st">'</span> <span class="op">%</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>      (u, v, result, stats[<span class="st">'access'</span>], stats))</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> {}</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> generic_is_reachable(ch, u, v, l<span class="op">=</span>ch.lvl, stats<span class="op">=</span>stats)</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'r(</span><span class="sc">%s</span><span class="st">,</span><span class="sc">%s</span><span class="st">)=</span><span class="sc">%r</span><span class="st"> in </span><span class="sc">%d</span><span class="st"> steps (level)</span><span class="ch">\n</span><span class="st">  </span><span class="sc">%r</span><span class="ch">\n</span><span class="st">'</span> <span class="op">%</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>      (u, <span class="st">'g'</span>, result, stats[<span class="st">'access'</span>], stats))</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> {}</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> generic_is_reachable(ch, u, v, II<span class="op">=</span>ch.mpi, l<span class="op">=</span>ch.lvl, stats<span class="op">=</span>stats)</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'r(</span><span class="sc">%s</span><span class="st">,</span><span class="sc">%s</span><span class="st">)=</span><span class="sc">%r</span><span class="st"> in </span><span class="sc">%d</span><span class="st"> steps (min-post + level)</span><span class="ch">\n</span><span class="st">  </span><span class="sc">%r</span><span class="st">'</span> <span class="op">%</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>      (u, v, result, stats[<span class="st">'access'</span>], stats))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>b-&gt;['e', 'f', 'g']
+e-&gt;['j']
+j-&gt;['o', 'p']
+p-&gt;[]
+f-&gt;['o', 'k']
+k-&gt;['p']
+p-&gt;[]
+g-&gt;['l']
+l-&gt;['q']
+q-&gt;[]
+r(b,o)=True in 11 steps (naive)
+  {'access': 11, 'level': [], 'walk': ['b', 'e', 'j', 'o', 'p', 'f', 'o', 'k', 'p', 'g', 'l', 'q']}
+
+b-&gt;['e', 'f', 'g']
+e-&gt;o min-post resolved 1 ∈ [1, 1] ⊆ [1, 4]
+f-&gt;['o', 'k']
+k-&gt;['p']
+p-&gt;[]
+g-&gt;['l']
+l-&gt;['q']
+q-&gt;[]
+r(b,o)=True in 8 steps (min-post)
+  {'access': 8, 'level': [], 'walk': ['b', 'e', 'f', 'o', 'k', 'p', 'g', 'l', 'q'], 'min-post': 'e'}
+
+b-&gt;['e', 'f', 'g']
+e-&gt;['j']
+j-&gt;['o', 'p']
+p-&gt;o level cut ¬0 &lt; 0
+f-&gt;['o', 'k']
+k-&gt;['p']
+p-&gt;o level cut ¬0 &lt; 0
+g-&gt;['l']
+l-&gt;['q']
+q-&gt;o level cut ¬0 &lt; 0
+r(b,g)=True in 11 steps (level)
+  {'access': 11, 'level': ['p', 'p', 'q'], 'walk': ['b', 'e', 'j', 'o', 'p', 'f', 'o', 'k', 'p', 'g', 'l', 'q']}
+
+b-&gt;['e', 'f', 'g']
+e-&gt;o min-post resolved 1 ∈ [1, 1] ⊆ [1, 4]
+f-&gt;['o', 'k']
+k-&gt;['p']
+p-&gt;o level cut ¬0 &lt; 0
+g-&gt;['l']
+l-&gt;['q']
+q-&gt;o level cut ¬0 &lt; 0
+r(b,o)=True in 8 steps (min-post + level)
+  {'access': 8, 'level': ['p', 'q'], 'walk': ['b', 'e', 'f', 'o', 'k', 'p', 'g', 'l', 'q'], 'min-post': 'e'}</code></pre>
+</div>
+</div>
+</section>
+<section id="dfs-walk-version-levels-min-post---generic_is_reachable_dfs" class="level3">
+<h3 class="anchored" data-anchor-id="dfs-walk-version-levels-min-post---generic_is_reachable_dfs">DFS walk version (levels + min-post) - <a href="https://jnareb.github.io/git-commit-graph-ext/reach.html#generic_is_reachable_dfs"><code>generic_is_reachable_dfs</code></a></h3>
+<p>The code below was called <code>generic_is_reachable_large_v1()</code> and aliased to <code>generic_is_reachable_large()</code> in the original Google Colab notebook (see the <a href="./index.html">index</a> for reference); though the one below has had its support for FELINE labels removed.</p>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/reachability.py#L123" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="generic_is_reachable_dfs" class="level3">
+<h3 class="anchored" data-anchor-id="generic_is_reachable_dfs">generic_is_reachable_dfs</h3>
+<blockquote class="blockquote">
+<pre><code> generic_is_reachable_dfs (DG, u, v, II=None, l=None, stats=None)</code></pre>
+</blockquote>
+<p>Whether in large graph DG <span class="math inline">\(v\)</span> is reachable from <span class="math inline">\(u\)</span>, utilizing given indices</p>
+<p>Given (u, v) ∈ V², two vertices in the DAG given by the DG parameter, calculate r(u,v), whether vertex v is reachable from vertex u.</p>
+<p>This is non-recursive version of the function, without verbose mode, intended for larger graphs. It travels the graph using depth-first search (DFS).</p>
+<table class="table">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 25%">
+<col style="width: 34%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th><strong>Type</strong></th>
+<th><strong>Default</strong></th>
+<th><strong>Details</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>DG</td>
+<td>NetworkX digraph</td>
+<td></td>
+<td>Directed acyclic graph.</td>
+</tr>
+<tr class="even">
+<td>u</td>
+<td>node</td>
+<td></td>
+<td>Source node.</td>
+</tr>
+<tr class="odd">
+<td>v</td>
+<td>node</td>
+<td></td>
+<td>Target node.</td>
+</tr>
+<tr class="even">
+<td>II</td>
+<td>NoneType</td>
+<td>None</td>
+<td>A dictionary with nodes as keys and min-post interval index as values<br>(2-element lists, representing intervals), e.g.&nbsp;result of<br>find_dfs_intervals().</td>
+</tr>
+<tr class="odd">
+<td>l</td>
+<td>NoneType</td>
+<td>None</td>
+<td>A dictionary with nodes as keys and vertex level as values<br>(vertex level is also known as generation number), e.g.&nbsp;result of<br>find_levels().</td>
+</tr>
+<tr class="even">
+<td>stats</td>
+<td>NoneType</td>
+<td>None</td>
+<td>A dictionary gathering statistics about calls. Currently supported<br>are:<br> * ‘access’ key, counting the number of intermediate vertices it<br> checks / accesses.<br> * ‘level-filter’ key, storing nodes that level index stopped searching at<br> * ‘walk’ key, storing all walked nodes<br> * ‘min-post’ key, storing node where min-post filter found reachable<br> * ‘max-depth’ key, with maximum stack depth</td>
+</tr>
+<tr class="odd">
+<td><strong>Returns</strong></td>
+<td><strong>bool</strong></td>
+<td></td>
+<td><strong>Whether v is reachable from u</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Basic test that <code>generic_is_reachable_dfs()</code> works (among others that there are no syntax errors).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> {}</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co">#u='b'</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>u<span class="op">=</span><span class="st">'a'</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>v<span class="op">=</span><span class="st">'o'</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'graph has </span><span class="sc">{}</span><span class="st"> nodes and </span><span class="sc">{}</span><span class="st"> edges'</span>.<span class="bu">format</span>(ch.number_of_nodes(), ch.number_of_edges()))</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'nodes: </span><span class="sc">{!r}</span><span class="st">'</span>.<span class="bu">format</span>(<span class="bu">list</span>(ch.nodes())))</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'it has the following attributes:'</span>)</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (attr,val) <span class="kw">in</span> ch.__dict__.items():</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">isinstance</span>(val, <span class="bu">dict</span>) <span class="kw">and</span> <span class="kw">not</span> attr.startswith(<span class="st">'_'</span>):</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">#print('- %s: %r' % (attr, ch.__dict__[attr]))</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'- </span><span class="sc">%s</span><span class="st">'</span> <span class="op">%</span> attr)</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> generic_is_reachable_dfs(ch, u, v, II<span class="op">=</span>ch.mpi, l<span class="op">=</span>ch.lvl, stats<span class="op">=</span>stats)</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'r(</span><span class="sc">%s</span><span class="st">,</span><span class="sc">%s</span><span class="st">)=</span><span class="sc">%r</span><span class="st"> in </span><span class="sc">%d</span><span class="st"> steps (min-post + level)</span><span class="ch">\n</span><span class="st">  </span><span class="sc">%r</span><span class="st">'</span> <span class="op">%</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>      (u, v, result, stats[<span class="st">'access'</span>], stats))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>graph has 17 nodes and 19 edges
+nodes: ['a', 'e', 'b', 'f', 'g', 'c', 'h', 'i', 'd', 'j', 'o', 'k', 'l', 'm', 'n', 'p', 'q']
+it has the following attributes:
+- graph
+- lvl
+- pos
+- mpi
+r(a,o)=True in 0 steps (min-post + level)
+  {'access': 0, 'level-filter': [], 'walk': ['a'], 'max-depth': 0, 'visited-filter': 0, 'min-post': 'a'}</code></pre>
+</div>
+</div>
+</section>
+<section id="bfs-walk-version-actively-developed---generic_is_reachable_bfs" class="level3">
+<h3 class="anchored" data-anchor-id="bfs-walk-version-actively-developed---generic_is_reachable_bfs">BFS walk version, actively developed - <a href="https://jnareb.github.io/git-commit-graph-ext/reach.html#generic_is_reachable_bfs"><code>generic_is_reachable_bfs</code></a></h3>
+<p>This is called <code>generic_is_reachable_large_bfs()</code> (where BFS = breadth-first search) in the <a href="https://colab.research.google.com/drive/1V-U7_slu5Z3s5iEEMFKhLXtaxSu5xyzg#scrollTo=Zb8cvM3szzuu">Google Colab notebook</a>, but with the support for FELINE index stripped, and the support for PReaCH extensions to the min-post intervals index commented out; the support for min-post graph intervals as negative-cut filters was kept (was part of PReaCH extension).</p>
+<p>This code tries to be more generic by separating <a href="https://jnareb.github.io/git-commit-graph-ext/reach.html#reachable_positive_cut"><code>reachable_positive_cut</code></a> and <a href="https://jnareb.github.io/git-commit-graph-ext/reach.html#reachable_negative_cut"><code>reachable_negative_cut</code></a> into their own functions, but they are still very much tied to given set of reachability indices.</p>
+<p>Currently there is no way to add another index at later time (the design is not open to extensions), but making something generic may be not necessary as it is mainly exploraatory notebook. The code in Git would be written in C language, not in Python.</p>
+<pre><code>/opt/hostedtoolcache/Python/3.9.16/x64/lib/python3.9/site-packages/fastcore/docscrape.py:225: UserWarning: Unknown section Todo:
+  else: warn(msg)</code></pre>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/reachability.py#L419" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="generic_is_reachable_bfs" class="level3">
+<h3 class="anchored" data-anchor-id="generic_is_reachable_bfs">generic_is_reachable_bfs</h3>
+<blockquote class="blockquote">
+<pre><code> generic_is_reachable_bfs (DG, u, v, II=None, l=None, stats=None)</code></pre>
+</blockquote>
+<p>Whether in large graph DG <span class="math inline">\(v\)</span> is reachable from <span class="math inline">\(u\)</span>, utilizing given indices</p>
+<p>Given (u, v) ∈ V², two vertices in the DAG given by the DG parameter, calculate r(u,v), whether vertex v is reachable from vertex u.</p>
+<p>This is non-recursive version of the function, without verbose mode, intended for larger graphs.</p>
+<table class="table">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 25%">
+<col style="width: 34%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th><strong>Type</strong></th>
+<th><strong>Default</strong></th>
+<th><strong>Details</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>DG</td>
+<td>NetworkX digraph</td>
+<td></td>
+<td>Directed acyclic graph.</td>
+</tr>
+<tr class="even">
+<td>u</td>
+<td>node</td>
+<td></td>
+<td>Source node.</td>
+</tr>
+<tr class="odd">
+<td>v</td>
+<td>node</td>
+<td></td>
+<td>Target node.</td>
+</tr>
+<tr class="even">
+<td>II</td>
+<td>NoneType</td>
+<td>None</td>
+<td>A dictionary with nodes as keys and min-post interval index as values<br>(2-element lists, representing intervals), e.g.&nbsp;result of<br><code>find_dfs_intervals()</code>.</td>
+</tr>
+<tr class="odd">
+<td>l</td>
+<td>NoneType</td>
+<td>None</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>stats</td>
+<td>NoneType</td>
+<td>None</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><strong>Returns</strong></td>
+<td><strong>bool</strong></td>
+<td></td>
+<td><strong>Whether v is reachable from u</strong></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/reachability.py#L398" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="walk_spanning" class="level3">
+<h3 class="anchored" data-anchor-id="walk_spanning">walk_spanning</h3>
+<blockquote class="blockquote">
+<pre><code> walk_spanning (DG, u, v, II)</code></pre>
+</blockquote>
+<p>Walk spanning tree from <span class="math inline">\(u\)</span> to <span class="math inline">\(v\)</span>, return path or []</p>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/reachability.py#L315" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="reachable_negative_cut" class="level3">
+<h3 class="anchored" data-anchor-id="reachable_negative_cut">reachable_negative_cut</h3>
+<blockquote class="blockquote">
+<pre><code> reachable_negative_cut (u, v, II=None, l=None, stats=None)</code></pre>
+</blockquote>
+<p>Whether given indices say that <span class="math inline">\(v\)</span> is not reachable from <span class="math inline">\(u\)</span></p>
+<p>Given (u, v) ∈ V², a negative cut happens if the index implies that vertex v is not reachable from vertex u.</p>
+<pre><code>r(u,v) =&gt; test(u,v)</code></pre>
+<table class="table">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 25%">
+<col style="width: 34%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th><strong>Type</strong></th>
+<th><strong>Default</strong></th>
+<th><strong>Details</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>u</td>
+<td>node</td>
+<td></td>
+<td>Source node.</td>
+</tr>
+<tr class="even">
+<td>v</td>
+<td>node</td>
+<td></td>
+<td>Target node.</td>
+</tr>
+<tr class="odd">
+<td>II</td>
+<td>NoneType</td>
+<td>None</td>
+<td>A dictionary with nodes as keys and min-post interval index as values<br>(2-element lists, representing intervals), e.g.&nbsp;result of<br><code>find_dfs_intervals()</code>.</td>
+</tr>
+<tr class="even">
+<td>l</td>
+<td>NoneType</td>
+<td>None</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>stats</td>
+<td>NoneType</td>
+<td>None</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><strong>Returns</strong></td>
+<td><strong>bool</strong></td>
+<td></td>
+<td><strong>Whether index indicates that v is not reachable from u</strong></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/reachability.py#L235" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="reachable_positive_cut" class="level3">
+<h3 class="anchored" data-anchor-id="reachable_positive_cut">reachable_positive_cut</h3>
+<blockquote class="blockquote">
+<pre><code> reachable_positive_cut (u, v, II=None, stats=None)</code></pre>
+</blockquote>
+<p>Whether given indices say that <span class="math inline">\(v\)</span> is reachable from <span class="math inline">\(u\)</span></p>
+<p>Given (u, v) ∈ V², a positive cut happens if the reachability index implies that vertex v is reachable from vertex u.</p>
+<pre><code>test(u,v) =&gt; r(u,v)</code></pre>
+<table class="table">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 25%">
+<col style="width: 34%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th><strong>Type</strong></th>
+<th><strong>Default</strong></th>
+<th><strong>Details</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>u</td>
+<td>node</td>
+<td></td>
+<td>Source node.</td>
+</tr>
+<tr class="even">
+<td>v</td>
+<td>node</td>
+<td></td>
+<td>Target node.</td>
+</tr>
+<tr class="odd">
+<td>II</td>
+<td>NoneType</td>
+<td>None</td>
+<td>A dictionary with nodes as keys and min-post interval index as values<br>(2-element lists, representing intervals), e.g.&nbsp;result of<br><code>find_dfs_intervals()</code>.</td>
+</tr>
+<tr class="even">
+<td>stats</td>
+<td>NoneType</td>
+<td>None</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><strong>Returns</strong></td>
+<td><strong>bool</strong></td>
+<td></td>
+<td><strong>Whether index indicates that v is reachable from u</strong></td>
+</tr>
+</tbody>
+</table>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># lazy generation of the graph</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    ch</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> <span class="pp">NameError</span>:</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>    ch<span class="op">=</span>graphs.RCH_graph()</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>recalculate <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> recalculate <span class="kw">or</span> <span class="kw">not</span> <span class="bu">hasattr</span>(ch, <span class="st">'lvl'</span>):</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>    ch.lvl <span class="op">=</span> find_levels(ch) <span class="co"># </span><span class="al">TODO</span><span class="co">: pre-computed levels are forward levels</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> recalculate <span class="kw">or</span> <span class="kw">not</span> <span class="bu">hasattr</span>(ch, <span class="st">'mpi'</span>):</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>    ch.mpi <span class="op">=</span> find_dfs_intervals(ch)</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> recalculate <span class="kw">or</span> <span class="kw">not</span> <span class="bu">hasattr</span>(ch, <span class="st">'mpi_ext'</span>):</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>    ch.mpi_ext <span class="op">=</span> find_dfs_intervals_extra(ch)</span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a><span class="co">#print('%r' % ch)</span></span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'graph has </span><span class="sc">{}</span><span class="st"> nodes and </span><span class="sc">{}</span><span class="st"> edges'</span>.<span class="bu">format</span>(ch.number_of_nodes(), ch.number_of_edges()))</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'nodes: </span><span class="sc">{!r}</span><span class="st">'</span>.<span class="bu">format</span>(<span class="bu">list</span>(ch.nodes())))</span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'it has the following attributes:'</span>)</span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (attr,val) <span class="kw">in</span> ch.__dict__.items():</span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="bu">isinstance</span>(val, <span class="bu">dict</span>) <span class="kw">and</span> <span class="kw">not</span> attr.startswith(<span class="st">'_'</span>):</span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>    <span class="co">#print('- %s: %r' % (attr, ch.__dict__[attr]))</span></span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'- </span><span class="sc">%s</span><span class="st">'</span> <span class="op">%</span> attr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>graph has 17 nodes and 19 edges
+nodes: ['a', 'e', 'b', 'f', 'g', 'c', 'h', 'i', 'd', 'j', 'o', 'k', 'l', 'm', 'n', 'p', 'q']
+it has the following attributes:
+- graph
+- lvl
+- pos
+- mpi
+- mpi_ext</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>plt.axis(<span class="st">"off"</span>)</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Example graph from PReaCH paper (Figures 1 and 2)</span><span class="ch">\n</span><span class="st">draw reversed - with arrows pointing down'</span>)</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx(ch,pos<span class="op">=</span>{key:(value[<span class="dv">0</span>],<span class="op">-</span>value[<span class="dv">1</span>]) <span class="cf">for</span> (key,value) <span class="kw">in</span> ch.pos.items()},</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>                 node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">2.0</span>,node_color<span class="op">=</span><span class="st">'#dd44ff'</span>)</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx_edges(ch,pos<span class="op">=</span>{key:(value[<span class="dv">0</span>],<span class="op">-</span>value[<span class="dv">1</span>]) <span class="cf">for</span> (key,value) <span class="kw">in</span> ch.pos.items()},</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>                       edgelist<span class="op">=</span>find_dfs_spanning(ch),</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>                       node_size<span class="op">=</span><span class="dv">500</span>,</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>                       width<span class="op">=</span><span class="fl">8.0</span>,edge_color<span class="op">=</span><span class="st">'#4444ff'</span>,alpha<span class="op">=</span><span class="fl">0.4</span>,arrowstyle<span class="op">=</span><span class="st">'-&gt;'</span>)</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<p><img src="08_reach_files/figure-html/cell-16-output-1.png" class="img-fluid"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># test unreachable</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> {}</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> generic_is_reachable_bfs(ch, <span class="st">'a'</span>, <span class="st">'g'</span>, stats<span class="op">=</span>stats)</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'r(</span><span class="sc">%s</span><span class="st">,</span><span class="sc">%s</span><span class="st">)=</span><span class="sc">%r</span><span class="st"> in </span><span class="sc">%d</span><span class="st"> steps (naive)</span><span class="ch">\n</span><span class="st">'</span> <span class="op">%</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>      (<span class="st">'a'</span>, <span class="st">'g'</span>, result, stats[<span class="st">'access'</span>]))</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>stats</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>r(a,g)=False in 4 steps (naive)
+</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre><code>{'negative-cut': {'visited': []},
+ 'depth': {'a': 0, 'e': 1, 'j': 2, 'o': 3, 'p': 3},
+ 'prev': {'a': None, 'e': 'a', 'j': 'e', 'o': 'j', 'p': 'j'},
+ 'access': 4,
+ 'walk': ['a', 'e', 'j', 'o', 'p'],
+ 'max_queue_size': 2,
+ 'visited': {'a', 'e', 'j', 'o', 'p'}}</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># test unreachable</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> {}</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> generic_is_reachable_bfs(ch, <span class="st">'a'</span>, <span class="st">'g'</span>, l<span class="op">=</span>ch.lvl, stats<span class="op">=</span>stats)</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'r(</span><span class="sc">%s</span><span class="st">,</span><span class="sc">%s</span><span class="st">)=</span><span class="sc">%r</span><span class="st"> in </span><span class="sc">%d</span><span class="st"> steps (level)</span><span class="ch">\n</span><span class="st">'</span> <span class="op">%</span></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>      (<span class="st">'a'</span>, <span class="st">'g'</span>, result, stats[<span class="st">'access'</span>]))</span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>stats</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>r(a,g)=False in 1 steps (level)
+</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre><code>{'negative-cut': {'level_lite': [], 'level_full': ['e'], 'visited': []},
+ 'depth': {'a': 0, 'e': 1},
+ 'prev': {'a': None, 'e': 'a'},
+ 'access': 1,
+ 'walk': ['a', 'e'],
+ 'max_queue_size': 1,
+ 'visited': {'a', 'e'}}</code></pre>
+</div>
+</div>
+<p>Testing <code>find_dfs_intervals_extra()</code> computing min-post graph intervals (negative-cut filter) and <code>generic_is_reachable_bfs()</code> ability to handle this information and use it.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="co"># test unreachable</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> {}</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> generic_is_reachable_bfs(ch, <span class="st">'a'</span>, <span class="st">'g'</span>, II<span class="op">=</span>ch.mpi_ext, l<span class="op">=</span>ch.lvl, stats<span class="op">=</span>stats)</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'r(</span><span class="sc">%s</span><span class="st">,</span><span class="sc">%s</span><span class="st">)=</span><span class="sc">%r</span><span class="st"> in </span><span class="sc">%d</span><span class="st"> steps (level + min-post graph + min-post tree)</span><span class="ch">\n</span><span class="st">'</span> <span class="op">%</span></span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>      (<span class="st">'a'</span>, <span class="st">'g'</span>, result, stats[<span class="st">'access'</span>]))</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'</span><span class="sc">%s</span><span class="st">: level=</span><span class="sc">%d</span><span class="st">, interval_graph = [</span><span class="sc">%2d</span><span class="st">, </span><span class="sc">%2d</span><span class="st">]'</span>   <span class="op">%</span> (<span class="st">'a'</span>,ch.lvl[<span class="st">'a'</span>],ch.mpi_ext[<span class="st">'a'</span>][<span class="st">'f_min'</span>],ch.mpi_ext[<span class="st">'a'</span>][<span class="st">'post'</span>]))</span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'</span><span class="sc">%s</span><span class="st">: level=</span><span class="sc">%d</span><span class="st">, interval_graph = [</span><span class="sc">%2d</span><span class="st">, </span><span class="sc">%2d</span><span class="st">]</span><span class="ch">\n</span><span class="st">'</span> <span class="op">%</span> (<span class="st">'g'</span>,ch.lvl[<span class="st">'g'</span>],ch.mpi_ext[<span class="st">'g'</span>][<span class="st">'f_min'</span>],ch.mpi_ext[<span class="st">'g'</span>][<span class="st">'post'</span>]))</span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>stats</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>r(a,g)=False in 0 steps (level + min-post graph + min-post tree)
+
+a: level=3, interval_graph = [ 1,  5]
+g: level=2, interval_graph = [ 8, 10]
+</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre><code>{'negative-cut': {'level_lite': [],
+  'level_full': [],
+  'f_max': ['a'],
+  'f_min': [],
+  'visited': []},
+ 'depth': {'a': 0},
+ 'prev': {'a': None},
+ 'access': 0,
+ 'walk': ['a'],
+ 'max_queue_size': 1,
+ 'visited': {'a'}}</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co"># test reachable</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> {}</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>u<span class="op">=</span><span class="st">'b'</span></span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>v<span class="op">=</span><span class="st">'o'</span></span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a><span class="co">#u='c'</span></span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a><span class="co">#v='q'</span></span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> generic_is_reachable_bfs(ch, u, v, stats<span class="op">=</span>stats)</span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'r(</span><span class="sc">%s</span><span class="st">,</span><span class="sc">%s</span><span class="st">)=</span><span class="sc">%r</span><span class="st"> in </span><span class="sc">%d</span><span class="st"> steps (naive)</span><span class="ch">\n</span><span class="st">  </span><span class="sc">%r</span><span class="ch">\n</span><span class="st">'</span> <span class="op">%</span></span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>      (u, v, result, stats[<span class="st">'access'</span>], stats))</span>
+<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> {}</span>
+<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> generic_is_reachable_bfs(ch, u, v, II<span class="op">=</span>ch.mpi, stats<span class="op">=</span>stats)</span>
+<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'r(</span><span class="sc">%s</span><span class="st">,</span><span class="sc">%s</span><span class="st">)=</span><span class="sc">%r</span><span class="st"> in </span><span class="sc">%d</span><span class="st"> steps (min-post)</span><span class="ch">\n</span><span class="st">  </span><span class="sc">%r</span><span class="ch">\n</span><span class="st">'</span> <span class="op">%</span></span>
+<span id="cb33-13"><a href="#cb33-13" aria-hidden="true" tabindex="-1"></a>      (u, v, result, stats[<span class="st">'access'</span>], stats))</span>
+<span id="cb33-14"><a href="#cb33-14" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> {}</span>
+<span id="cb33-15"><a href="#cb33-15" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> generic_is_reachable_bfs(ch, u, v, l<span class="op">=</span>ch.lvl, stats<span class="op">=</span>stats)</span>
+<span id="cb33-16"><a href="#cb33-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'r(</span><span class="sc">%s</span><span class="st">,</span><span class="sc">%s</span><span class="st">)=</span><span class="sc">%r</span><span class="st"> in </span><span class="sc">%d</span><span class="st"> steps (level)</span><span class="ch">\n</span><span class="st">  </span><span class="sc">%r</span><span class="ch">\n</span><span class="st">'</span> <span class="op">%</span></span>
+<span id="cb33-17"><a href="#cb33-17" aria-hidden="true" tabindex="-1"></a>      (u, <span class="st">'g'</span>, result, stats[<span class="st">'access'</span>], stats))</span>
+<span id="cb33-18"><a href="#cb33-18" aria-hidden="true" tabindex="-1"></a>stats <span class="op">=</span> {}</span>
+<span id="cb33-19"><a href="#cb33-19" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> generic_is_reachable_bfs(ch, u, v, II<span class="op">=</span>ch.mpi, l<span class="op">=</span>ch.lvl, stats<span class="op">=</span>stats)</span>
+<span id="cb33-20"><a href="#cb33-20" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'r(</span><span class="sc">%s</span><span class="st">,</span><span class="sc">%s</span><span class="st">)=</span><span class="sc">%r</span><span class="st"> in </span><span class="sc">%d</span><span class="st"> steps (min-post + level)</span><span class="ch">\n</span><span class="st">  </span><span class="sc">%r</span><span class="st">'</span> <span class="op">%</span></span>
+<span id="cb33-21"><a href="#cb33-21" aria-hidden="true" tabindex="-1"></a>      (u, v, result, stats[<span class="st">'access'</span>], stats))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>r(b,o)=True in 9 steps (naive)
+  {'negative-cut': {'visited': []}, 'depth': {'b': 0, 'e': 1, 'f': 1, 'g': 1, 'j': 2, 'o': 3, 'k': 2, 'l': 2, 'p': 3}, 'prev': {'b': None, 'e': 'b', 'f': 'b', 'g': 'b', 'j': 'e', 'o': 'j', 'k': 'f', 'l': 'g', 'p': 'j'}, 'access': 9, 'walk': ['b', 'e', 'f', 'g', 'j', 'o'], 'max_queue_size': 5, 'visited': {'b', 'e', 'g', 'j', 'f', 'o'}, 'path': ['b', 'e', 'j', 'o'], 'len': 3}
+
+r(b,o)=True in 3 steps (min-post)
+  {'negative-cut': {'visited': []}, 'depth': 1, 'prev': {'b': None, 'e': 'b', 'f': 'b', 'g': 'b'}, 'access': 3, 'walk': ['b', 'e'], 'max_queue_size': 3, 'visited': {'b', 'e'}, 'positive-cut': {'type': 'min-post', 'node': 'e'}, 'path-pre': ['b', 'e'], 'path-post': ['e', 'j', 'o'], 'len-pre': 1, 'len-post': 2, 'path': ['b', 'e', 'j', 'o'], 'len': 3}
+
+r(b,g)=True in 9 steps (level)
+  {'negative-cut': {'level_lite': [], 'level_full': [], 'visited': []}, 'depth': {'b': 0, 'e': 1, 'f': 1, 'g': 1, 'j': 2, 'o': 3, 'k': 2, 'l': 2, 'p': 3}, 'prev': {'b': None, 'e': 'b', 'f': 'b', 'g': 'b', 'j': 'e', 'o': 'j', 'k': 'f', 'l': 'g', 'p': 'j'}, 'access': 9, 'walk': ['b', 'e', 'f', 'g', 'j', 'o'], 'max_queue_size': 5, 'visited': {'b', 'e', 'g', 'j', 'f', 'o'}, 'path': ['b', 'e', 'j', 'o'], 'len': 3}
+
+r(b,o)=True in 3 steps (min-post + level)
+  {'negative-cut': {'level_lite': [], 'level_full': [], 'visited': []}, 'depth': 1, 'prev': {'b': None, 'e': 'b', 'f': 'b', 'g': 'b'}, 'access': 3, 'walk': ['b', 'e'], 'max_queue_size': 3, 'visited': {'b', 'e'}, 'positive-cut': {'type': 'min-post', 'node': 'e'}, 'path-pre': ['b', 'e'], 'path-post': ['e', 'j', 'o'], 'len-pre': 1, 'len-post': 2, 'path': ['b', 'e', 'j', 'o'], 'len': 3}</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="co">#@title test generic_is_reachable_large_bfs { form-width: "30%" }</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a><span class="co"># lazy generation of the graph</span></span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>    DG</span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> <span class="pp">NameError</span>:</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>    DG<span class="op">=</span>graphs.crown_DAG()</span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a>recalculate <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> recalculate <span class="kw">or</span> <span class="kw">not</span> <span class="bu">hasattr</span>(DG, <span class="st">'lvl'</span>):</span>
+<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a>    DG.lvl <span class="op">=</span> find_levels(DG)</span>
+<span id="cb35-12"><a href="#cb35-12" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> recalculate <span class="kw">or</span> <span class="kw">not</span> <span class="bu">hasattr</span>(DG, <span class="st">'mpi'</span>):</span>
+<span id="cb35-13"><a href="#cb35-13" aria-hidden="true" tabindex="-1"></a>    DG.mpi <span class="op">=</span> find_dfs_intervals(DG)</span>
+<span id="cb35-14"><a href="#cb35-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-15"><a href="#cb35-15" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> recalculate <span class="kw">or</span> <span class="kw">not</span> <span class="bu">hasattr</span>(DG, <span class="st">'pos'</span>):</span>
+<span id="cb35-16"><a href="#cb35-16" aria-hidden="true" tabindex="-1"></a>    DG.pos<span class="op">=</span>{<span class="dv">1</span>:(<span class="dv">1</span>,<span class="dv">4</span>),<span class="dv">2</span>:(<span class="dv">3</span>,<span class="dv">6</span>),<span class="st">'u'</span>:(<span class="dv">2</span>,<span class="dv">2</span>),<span class="dv">3</span>:(<span class="dv">4</span>,<span class="dv">1</span>),<span class="dv">4</span>:(<span class="dv">6</span>,<span class="dv">3</span>),<span class="st">'v'</span>:(<span class="dv">5</span>,<span class="dv">5</span>)}</span>
+<span id="cb35-17"><a href="#cb35-17" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> recalculate <span class="kw">or</span> <span class="kw">not</span> <span class="bu">hasattr</span>(DG, <span class="st">'span'</span>):</span>
+<span id="cb35-18"><a href="#cb35-18" aria-hidden="true" tabindex="-1"></a>    DG.span<span class="op">=</span>find_dfs_spanning(DG)</span>
+<span id="cb35-19"><a href="#cb35-19" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb35-20"><a href="#cb35-20" aria-hidden="true" tabindex="-1"></a><span class="co"># configure plot</span></span>
+<span id="cb35-21"><a href="#cb35-21" aria-hidden="true" tabindex="-1"></a>plt.axis(<span class="st">'off'</span>)</span>
+<span id="cb35-22"><a href="#cb35-22" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">'Crown DAG $S_0^3$ with the spanning tree overlay '</span><span class="op">+</span></span>
+<span id="cb35-23"><a href="#cb35-23" aria-hidden="true" tabindex="-1"></a>          <span class="st">'(find_dfs_spanning)'</span>)</span>
+<span id="cb35-24"><a href="#cb35-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-25"><a href="#cb35-25" aria-hidden="true" tabindex="-1"></a><span class="co"># draw graph and its spanning tree</span></span>
+<span id="cb35-26"><a href="#cb35-26" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx(DG,</span>
+<span id="cb35-27"><a href="#cb35-27" aria-hidden="true" tabindex="-1"></a>                 pos<span class="op">=</span>DG.pos,</span>
+<span id="cb35-28"><a href="#cb35-28" aria-hidden="true" tabindex="-1"></a>                 node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">8.0</span>,</span>
+<span id="cb35-29"><a href="#cb35-29" aria-hidden="true" tabindex="-1"></a>                 edge_color<span class="op">=</span><span class="st">'#aaaaaa'</span>)</span>
+<span id="cb35-30"><a href="#cb35-30" aria-hidden="true" tabindex="-1"></a>nx.draw_networkx_edges(DG,</span>
+<span id="cb35-31"><a href="#cb35-31" aria-hidden="true" tabindex="-1"></a>                       pos<span class="op">=</span>DG.pos,</span>
+<span id="cb35-32"><a href="#cb35-32" aria-hidden="true" tabindex="-1"></a>                       edgelist<span class="op">=</span>DG.span,</span>
+<span id="cb35-33"><a href="#cb35-33" aria-hidden="true" tabindex="-1"></a>                       node_size<span class="op">=</span><span class="dv">500</span>,width<span class="op">=</span><span class="fl">2.0</span>,</span>
+<span id="cb35-34"><a href="#cb35-34" aria-hidden="true" tabindex="-1"></a>                       arrowstyle<span class="op">=</span><span class="st">'-&gt;'</span>)</span>
+<span id="cb35-35"><a href="#cb35-35" aria-hidden="true" tabindex="-1"></a>plt.draw()</span>
+<span id="cb35-36"><a href="#cb35-36" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb35-37"><a href="#cb35-37" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'crown DAG: </span><span class="sc">%r</span><span class="st">'</span> <span class="op">%</span> DG)</span>
+<span id="cb35-38"><a href="#cb35-38" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- r(u,v): </span><span class="sc">%r</span><span class="st">'</span> <span class="op">%</span> </span>
+<span id="cb35-39"><a href="#cb35-39" aria-hidden="true" tabindex="-1"></a>      generic_is_reachable_bfs(DG,<span class="st">'u'</span>,<span class="st">'v'</span>,</span>
+<span id="cb35-40"><a href="#cb35-40" aria-hidden="true" tabindex="-1"></a>                               l<span class="op">=</span>DG.lvl,II<span class="op">=</span>DG.mpi))</span>
+<span id="cb35-41"><a href="#cb35-41" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'- r(1,2): </span><span class="sc">%r</span><span class="st">'</span> <span class="op">%</span></span>
+<span id="cb35-42"><a href="#cb35-42" aria-hidden="true" tabindex="-1"></a>      generic_is_reachable_bfs(DG, <span class="dv">1</span>,  <span class="dv">2</span>,</span>
+<span id="cb35-43"><a href="#cb35-43" aria-hidden="true" tabindex="-1"></a>                               l<span class="op">=</span>DG.lvl,II<span class="op">=</span>DG.mpi))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>crown DAG: &lt;networkx.classes.digraph.DiGraph object at 0x000001963BB1F9D0&gt;
+- r(u,v): False
+- r(1,2): True</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<p><img src="08_reach_files/figure-html/cell-21-output-2.png" class="img-fluid"></p>
+</div>
+</div>
+<blockquote class="blockquote">
+<p>TODO: - examine other example graphs, or - create interactive visualization - examine paths, cutoffs, etc</p>
+</blockquote>
+<hr>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

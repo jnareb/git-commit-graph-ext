@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.357">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Interacting with Git repositories in Python, extracting commit history from them, and turning it into NetworkX DiGraph">
+
+<title>git_commit_graph_ext - Extracting commit graphs from Git repositories</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="styles.css">
+<meta property="og:title" content="git_commit_graph_ext - Extracting commit graphs from Git repositories">
+<meta property="og:description" content="Interacting with Git repositories in Python, extracting commit history from them, and turning it into NetworkX DiGraph">
+<meta property="og:site-name" content="git_commit_graph_ext">
+<meta name="twitter:title" content="git_commit_graph_ext - Extracting commit graphs from Git repositories">
+<meta name="twitter:description" content="Interacting with Git repositories in Python, extracting commit history from them, and turning it into NetworkX DiGraph">
+<meta name="twitter:card" content="summary">
+</head>
+
+<body class="nav-sidebar floating nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">git_commit_graph_ext</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools ms-auto">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+      <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./git.html">Extracting commit graphs from Git repositories</a></li></ol></nav>
+      <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+      </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Commit graph labeling for speeding up Git commands</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./tools.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Graphs in Python</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./related.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Related works: various reachability labelings</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./example_graphs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Example directed graphs</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./reachability_index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reachability index</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./levels.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Topological levels</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./interval_labels.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">DFS Intervals Labelling</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./reach.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reachability queries</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./git.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Extracting commit graphs from Git repositories</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./checkpoint.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Checkpointing</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./datasets.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Graph datasets</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./repos.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Large Git repositories</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Reachability evaluation</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./a.09_git_explore.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exploring extraction of commit graphs from Git repositories, and examining their shape and stats</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#interacting-with-git-repositories-in-python" id="toc-interacting-with-git-repositories-in-python" class="nav-link active" data-scroll-target="#interacting-with-git-repositories-in-python">Interacting with Git repositories in Python</a></li>
+  <li><a href="#cloning-git.git-repository-and-extracting-and-saving-the-commit-graph" id="toc-cloning-git.git-repository-and-extracting-and-saving-the-commit-graph" class="nav-link" data-scroll-target="#cloning-git.git-repository-and-extracting-and-saving-the-commit-graph">Cloning git.git repository, and extracting and saving the commit graph</a>
+  <ul class="collapse">
+  <li><a href="#summary-of-off-the-record-findings-about-cloning-repositories" id="toc-summary-of-off-the-record-findings-about-cloning-repositories" class="nav-link" data-scroll-target="#summary-of-off-the-record-findings-about-cloning-repositories">Summary of off-the-record findings about cloning repositories</a></li>
+  <li><a href="#summary-of-findings-of-testing-different-graph-output-formats-saving-graph-to-a-file" id="toc-summary-of-findings-of-testing-different-graph-output-formats-saving-graph-to-a-file" class="nav-link" data-scroll-target="#summary-of-findings-of-testing-different-graph-output-formats-saving-graph-to-a-file">Summary of findings of testing different graph output formats (saving graph to a file)</a></li>
+  <li><a href="#sparse_clone" id="toc-sparse_clone" class="nav-link" data-scroll-target="#sparse_clone">sparse_clone</a></li>
+  <li><a href="#get_repo" id="toc-get_repo" class="nav-link" data-scroll-target="#get_repo">get_repo</a></li>
+  <li><a href="#functions-for-extracting-the-commit-graph-out-of-git-repository" id="toc-functions-for-extracting-the-commit-graph-out-of-git-repository" class="nav-link" data-scroll-target="#functions-for-extracting-the-commit-graph-out-of-git-repository">Functions for extracting the commit graph out of git repository</a></li>
+  <li><a href="#repo_generate_adjlist" id="toc-repo_generate_adjlist" class="nav-link" data-scroll-target="#repo_generate_adjlist">repo_generate_adjlist</a></li>
+  <li><a href="#repo_adjlist_to_graph" id="toc-repo_adjlist_to_graph" class="nav-link" data-scroll-target="#repo_adjlist_to_graph">repo_adjlist_to_graph</a></li>
+  <li><a href="#commit_graph" id="toc-commit_graph" class="nav-link" data-scroll-target="#commit_graph">commit_graph</a></li>
+  <li><a href="#repo_to_graph" id="toc-repo_to_graph" class="nav-link" data-scroll-target="#repo_to_graph">repo_to_graph</a></li>
+  </ul></li>
+  </ul>
+<div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/issues/new" class="toc-action">Report an issue</a></p></div></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Extracting commit graphs from Git repositories</h1>
+</div>
+
+<div>
+  <div class="description">
+    Interacting with Git repositories in Python, extracting commit history from them, and turning it into NetworkX DiGraph
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<!-- WARNING: THIS FILE WAS AUTOGENERATED! DO NOT EDIT! -->
+<p>Imports for the <a href="https://jnareb.github.io/git-commit-graph-ext/git.html#commit_graph"><code>commit_graph</code></a> module</p>
+<p>Imports for plotting</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="interacting-with-git-repositories-in-python" class="level2">
+<h2 class="anchored" data-anchor-id="interacting-with-git-repositories-in-python">Interacting with Git repositories in Python</h2>
+<p>There are various ways of interacting with Git repositories from Python code:</p>
+<ul>
+<li>shelling out and running <code>git</code> directly (for example using <code>import subprocess</code>)</li>
+<li>using <a href="https://gitpython.readthedocs.io/">GitPython</a> (<code>import git</code>)</li>
+<li>using <a href="https://www.pygit2.org/">pygit2</a> (<code>import pygit2</code>) - Python bindings to libgit2 library</li>
+</ul>
+<p><strong>GitPython</strong> is a python library used to interact with git repositories, high-level like git-porcelain, or low-level like git-plumbing.</p>
+<p>It provides abstractions of git objects for easy access of repository data, and additionally allows you to access the git repository more directly using either a pure python implementation, or the faster, but more resource intensive git command implementation.</p>
+<p>The object database implementation is optimized for handling large quantities of objects and large datasets, which is achieved by using low-level structures and data streaming.</p>
+<p><u><em>NOTE:</em></u> Promisory objects (in sparse clone, <code>--filter=tree:0</code>) might be not supported.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> git</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>repo <span class="op">=</span> git.Repo.clone_from(url, path, [<span class="st">'--mirror'</span>, <span class="st">'--filter=tree:0'</span>])</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>repo <span class="op">=</span> git.Repo(path) <span class="co"># just open the repository</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><strong>Pygit2</strong> is a set of Python bindings to the libgit2 shared library, libgit2 implements the core of Git.</p>
+<p><u><em>NOTE:</em></u> It is quite low level, and not everything is implemented yet (especially new features).</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pygit2</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>pygit2.clone_repository(url, path, bare<span class="op">=</span><span class="va">True</span>) <span class="co"># no support for filters?</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>repo <span class="op">=</span> pygit2.Repository(path)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The <strong>subprocess</strong> module in the Python standard library allows you to spawn new processes, connect to their input/output/error pipes, and obtain their return codes.</p>
+<p>The recommended approach to invoking subprocesses is to use the <code>run()</code> function for all use cases it can handle.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> subprocess</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>subprocess.run([<span class="st">'git'</span>, <span class="st">'clone'</span>, <span class="st">'--mirror'</span>, <span class="st">'--filter=tree:0'</span>, <span class="st">'--quiet'</span>, url, path])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="cloning-git.git-repository-and-extracting-and-saving-the-commit-graph" class="level2">
+<h2 class="anchored" data-anchor-id="cloning-git.git-repository-and-extracting-and-saving-the-commit-graph">Cloning git.git repository, and extracting and saving the commit graph</h2>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The exploration was moved to the Appendix for this notebook: <a href="./a.09_git_explore.html"><code>A.09_git_explore.ipynb</code></a></p>
+</div>
+</div>
+<section id="summary-of-off-the-record-findings-about-cloning-repositories" class="level3">
+<h3 class="anchored" data-anchor-id="summary-of-off-the-record-findings-about-cloning-repositories">Summary of off-the-record findings about cloning repositories</h3>
+<p>Why it is important to use sparse clone - it is much faster, and takes up less space. For example for git.git repository we have the following (all times are wall time, and subject to interference from other CPU load): - full clone: 54s - mirror: 1min 19s - sparse: 14.9s - 19.4s</p>
+</section>
+<section id="summary-of-findings-of-testing-different-graph-output-formats-saving-graph-to-a-file" class="level3">
+<h3 class="anchored" data-anchor-id="summary-of-findings-of-testing-different-graph-output-formats-saving-graph-to-a-file">Summary of findings of testing different graph output formats (saving graph to a file)</h3>
+<p><u>Storing DataFrame of edgelist data</u></p>
+<p>The DataFrame is created using <code>nx.to_pandas_edgelist(graph)</code></p>
+<p>The smallest file is the result of storing DataFrame of edgelist data as gzipped pickle (written using Pandas’ <code>to_pickle()</code>) - the <strong>*.df_edgelist.pickle.gz</strong> file.</p>
+<ul>
+<li>Advantages:
+<ul>
+<li>2nd smallest size</li>
+<li>no extra modules to install</li>
+<li>preserves types</li>
+</ul></li>
+<li>Disadvantages:
+<ul>
+<li>Python-specific</li>
+<li>unsafe</li>
+<li>slow (?)</li>
+</ul></li>
+</ul>
+<p>Next smallest is, surprisingly, gzipped CSV representing DataFrame of edgelist data (written using Pandas’ <code>to_csv()</code>) - the <strong>*.df_edgelist.csv.gz</strong> file.</p>
+<ul>
+<li>Advantages:
+<ul>
+<li>3rd smallest size</li>
+<li>no extra modules to install</li>
+<li>universal format</li>
+</ul></li>
+<li>Disadvantages:
+<ul>
+<li>slow (?)</li>
+</ul></li>
+</ul>
+<p>The fast interchange formats, <a href="https://github.com/wesm/feather">Feather</a> and <a href="https://parquet.apache.org/">Parquet</a> turned out to produce quite large files; they are however 4th smallest and 2nd smallest, respectively, among uncompressed formats.</p>
+<p><strong><em>Feather</em></strong> provides a binary columnar serialization for data frames. It is designed to make reading and writing data frames efficient, and to make sharing data across data analysis languages easy.</p>
+<p>Feather is designed to faithfully serialize and de-serialize <code>DataFrame</code>s, supporting all of the pandas dtypes, including extension dtypes such as categorical and datetime with tz.</p>
+<p><strong><em>Apache Parquet</em></strong> provides a <em>partitioned</em> binary columnar serialization for data frames. It is designed to make reading and writing data frames efficient, and to make sharing data across data analysis languages easy. Parquet can use a variety of compression techniques (default is to use ‘snappy’) to shrink the file size as much as possible while still maintaining good read performance.</p>
+<p>Parquet is designed to faithfully serialize and de-serialize <code>DataFrame</code>s, supporting all of the pandas dtypes, including extension dtypes such as datetime with tz.</p>
+<ul>
+<li>Advantages:
+<ul>
+<li>universal, cross language</li>
+<li>preserves types</li>
+<li>fast</li>
+</ul></li>
+<li>Disadvantages:
+<ul>
+<li>requires <code>pyarrow</code> package to be installed</li>
+<li>quite large file size</li>
+</ul></li>
+</ul>
+<p>The <strong><em>HDF5</em></strong> format has the advantage of being able to store multiple <code>DataFrame</code>s in a single file, for example one <code>DataFrame</code> to hold edgelist data to define the graph connections, and one <code>DataFrame</code> holding various per vertex (per node) rechablity index data. Unfortunately, even internally compressed it has one of larger file sizes (and largest compressed).</p>
+<p><a href="https://portal.hdfgroup.org/display/HDF5/HDF5">Hierarchical Data Format (HDF)</a> is self-describing, allowing an application to interpret the structure and contents of a file with no outside information. One HDF file can hold a mix of related objects which can be accessed as a group or as individual objects.</p>
+<p>The <code>to_hdf()</code> method in Pandas uses the <code>HDFStore</code> in the background, which in turn utilizes the <a href="https://www.pytables.org/">PyTables</a> library.</p>
+<ul>
+<li>Advantages:
+<ul>
+<li>universal, cross language</li>
+<li>preserves types</li>
+<li>can store multiple <code>DataFrame</code>s</li>
+</ul></li>
+<li>Disadvantages:
+<ul>
+<li>large file size</li>
+<li>requires <code>tables</code> package to be installed (PyTables)</li>
+<li>slow (?)</li>
+<li>unsafe (because of serializing object-dtype data with pickle)</li>
+</ul></li>
+</ul>
+<table class="table">
+<tbody>
+<tr class="odd">
+<td><u>Storing NetworkX DiGraph directly</u></td>
+</tr>
+<tr class="even">
+<td>It turns out that the <a href="https://networkx.org/documentation/stable/reference/readwrite/sparsegraph6.html">graph6 / sparse6 format</a> is not a good choice for storing the commit graph for the following reasons: - NetworkX does not support digraph6 format; neither <code>write_graph6</code> not <code>write_sparse6</code> are implemented for directed graphs - the <a href="http://users.cecs.anu.edu.au/~bdm/data/formats.txt">digraph6 format</a> is dense graph format, storing the encoded adjacency matrix; there is no disparse6 or digraph6sparse format - SparseGraph6 formats do not store node/vertex names, which might be needed for future computations or visualizations</td>
+</tr>
+<tr class="odd">
+<td>Except for the adjacency lists format (<strong>*.adjlist.txt</strong>), which cannot store any additional data (not even per-edge), the multi-line adjacency lists (<strong>*.multiline_adjlist.txt</strong>) and edge lists (<strong>*.edgelist.txt</strong>) formats have file sizes larger than the Parquet storing <code>DataFrame</code> of edge lists. Note however that they are uncompressed.</td>
+</tr>
+<tr class="even">
+<td>The adjacency list format can be created directly by appropriate Git command.</td>
+</tr>
+<tr class="odd">
+<td>Because those formats cannot store per-node data, they are not considered for use.</td>
+</tr>
+<tr class="even">
+<td>Among specialized graph file formats, which I assume can store both per-node and per-edge data, <strong><em>Pajek</em></strong> format is smallest (compressed), and 4th smallest among all considered storage formats. It is also smallest uncompressed among similar file formats.</td>
+</tr>
+<tr class="odd">
+<td>Writing NetworkX graphs as Python pickles using <code>write_gpickle()</code> (*<strong>.gpickle.gz</strong>) results in quite large file compressed, one of the largest files uncompressed.</td>
+</tr>
+<tr class="even">
+<td>On the other hand NetworkX graphs can contain any hashable Python object as node (not just integers and strings). For arbitrary data types it may be difficult to represent the data as text. In that case using Python pickles to store the graph data can be used.</td>
+</tr>
+<tr class="odd">
+<td>## Examining computing and storing reachability labels and other per-node data</td>
+</tr>
+<tr class="even">
+<td>:::{.callout-note}</td>
+</tr>
+<tr class="odd">
+<td>The exploration was moved to the Appendix for this notebook: <a href="./a.09_git_explore.html"><code>A.09_git_explore.ipynb</code></a></td>
+</tr>
+<tr class="even">
+<td>:::</td>
+</tr>
+<tr class="odd">
+<td>### Summary of findings of storing computed reachability labels and related stats</td>
+</tr>
+<tr class="even">
+<td>Strangely,smallest files size this time is given when storing using the <strong><em>HDF5</em></strong> (with <code>compresslevel=6</code>) format, which is also 2nd fastest.</td>
+</tr>
+<tr class="odd">
+<td>Saving <code>DataFrame</code> using the <strong><em>Parquet</em></strong> format is fastest, but this time it gives the largest size of the file</td>
+</tr>
+<tr class="even">
+<td>Saving as <strong>*.pickle.gz</strong> or <strong>*.csv.gz</strong> is slowest and second slowest, while both being in the middlle with respect to file sizes (the pickle-based format gives smaller file size).</td>
+</tr>
+<tr class="odd">
+<td>## Functions for creating the commit-graph out of repository, computing labelling, etc</td>
+</tr>
+<tr class="even">
+<td>Those directories would be needed for tests: - <code>repos</code> for storing cloned Git repositories - <code>datasets</code> for storing extracted commit graphs, and other data</td>
+</tr>
+<tr class="odd">
+<td>::: {.cell}</td>
+</tr>
+<tr class="even">
+<td>### Functions for cloning the repository</td>
+</tr>
+<tr class="odd">
+<td>Because the repository is needed only to extract the commit graph from it, therefore to save time and disk space sparse clone will be used.</td>
+</tr>
+<tr class="even">
+<td>This strongly suggests using the Git command line.</td>
+</tr>
+</tbody>
+</table>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/commit_graph.py#L17" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="sparse_clone" class="level3">
+<h3 class="anchored" data-anchor-id="sparse_clone">sparse_clone</h3>
+<blockquote class="blockquote">
+<pre><code> sparse_clone (url, repo_name=None, repos_dir='repos')</code></pre>
+</blockquote>
+<p>Clone Git repository by URL using sparse/partial clone</p>
+<p>The “Sparse Clone” or the “Partial Clone” feature is a performance optimization for Git that allows Git to function without having a complete copy of the repository. The goal of this feature is to allow Git better handle extremely large repositories, or in this case store the repository using less disk space.</p>
+<p>To retrieve the commit graph out of the git repository only commit objects are needed, so all tree and blob objects can be omitted from the clone.</p>
+<p>Using sparse clone is much more efficient: the process is faster, and the resulting repository takes much less disk space than full clone.</p>
+<p>NOTE: Use of partial clone requires that the user be online and the origin remote or other promisor remotes be available for on-demand fetching of missing objects, unless the user can stay within the pre-selected subset of objects.</p>
+<p>see: https://git-scm.com/docs/git-clone see: https://git-scm.com/docs/git-rev-list#Documentation/git-rev-list.txt—filterltfilter-specgt see: https://github.com/git/git/blob/master/Documentation/technical/partial-clone.txt</p>
+<table class="table">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 25%">
+<col style="width: 34%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th><strong>Type</strong></th>
+<th><strong>Default</strong></th>
+<th><strong>Details</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>url</td>
+<td>str</td>
+<td></td>
+<td>The repository to be cloned, in most cases it would be public URL<br>that can be used to clone the remote repository.</td>
+</tr>
+<tr class="even">
+<td>repo_name</td>
+<td>NoneType</td>
+<td>None</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>repos_dir</td>
+<td>str</td>
+<td>repos</td>
+<td>The directory where to put cloned repository into.<br>By default “repos” is used.</td>
+</tr>
+</tbody>
+</table>
+<p>Let’s <strong>test</strong> <strong><code>sparse_clone()</code></strong>, for example using quite small and archived <a href="https://github.com/githubtraining/hellogitworld"><code>https://github.com/githubtraining/hellogitworld</code></a> “Hello Git World” sample training repository.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># remove the test repository, if exists</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> shutil <span class="im">import</span> rmtree</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>repo_url<span class="op">=</span><span class="st">"https://github.com/githubtraining/hellogitworld"</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>repo_path<span class="op">=</span><span class="st">"repos/hellogitworld.git"</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>repo_name<span class="op">=</span><span class="st">"hellogitworld.git"</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co">#rmtree(repo_path, ignore_errors=True)</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="co"># clone the repository</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>sparse_clone(repo_url, repo_name<span class="op">=</span>repo_path, repos_dir<span class="op">=</span><span class="va">None</span>)</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="co"># the directory should exist, and be a directory</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> Path(repo_path).is_dir()</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - repository exists as directory after cloning'</span>)</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="co"># it should look like a git repository</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> (Path(repo_path) <span class="op">/</span> <span class="st">"HEAD"</span>).is_file()</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> (Path(repo_path) <span class="op">/</span> <span class="st">"objects"</span>).is_dir()</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - and it looks like a git repository'</span>)</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a><span class="co">#!git -C repos/hellogitworld.git config --get remote.origin.url</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a><span class="co">#!git -C repos/hellogitworld.git remote show -n origin</span></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">NOTE</span><span class="co">: `capture_output` was added in Python 3.7, GitHub CI runs Python 3.6</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> subprocess.run([<span class="st">'git'</span>, <span class="st">'-C'</span>, repo_path, <span class="st">'config'</span>, <span class="st">'--get'</span>, <span class="st">'remote.origin.url'</span>],</span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>                      stdout<span class="op">=</span>subprocess.PIPE).stdout.decode(<span class="st">"utf-8"</span>).strip() <span class="op">==</span> repo_url</span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - cloned repository has correct url'</span>)</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a><span class="co"># attempt cleanup after the test, which may not work on MS Windows</span></span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a><span class="co">#rmtree(repo_path, ignore_errors=True)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>ok - repository exists as directory after cloning
+ok - and it looks like a git repository
+ok - cloned repository has correct url</code></pre>
+</div>
+</div>
+<p>If repository exists, there is no need to clone it</p>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/commit_graph.py#L68" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="get_repo" class="level3">
+<h3 class="anchored" data-anchor-id="get_repo">get_repo</h3>
+<blockquote class="blockquote">
+<pre><code> get_repo (url, repo_path, refresh=False)</code></pre>
+</blockquote>
+<p>Clone Git repository into given path, if needed</p>
+<p>If the path given by <code>repo_path</code> does not exist, or <code>refresh</code> is true, clone Git repository at <code>url</code> for later extraction of the commit graph.</p>
+<p>see: <code>sparse_clone()</code></p>
+<table class="table">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 25%">
+<col style="width: 34%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th><strong>Type</strong></th>
+<th><strong>Default</strong></th>
+<th><strong>Details</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>url</td>
+<td>str</td>
+<td></td>
+<td>The repository to be cloned, in most cases it would be public URL<br>that can be used to clone the remote repository.</td>
+</tr>
+<tr class="even">
+<td>repo_path</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>refresh</td>
+<td>bool</td>
+<td>False</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="functions-for-extracting-the-commit-graph-out-of-git-repository" class="level3">
+<h3 class="anchored" data-anchor-id="functions-for-extracting-the-commit-graph-out-of-git-repository">Functions for extracting the commit graph out of git repository</h3>
+<p>Using Git commands, we can easily create text file that store commit-graph information in the adjacency list format, from which it is easy to create a NetworkX graph (<code>DiGraph</code>). Shortened object identifiers (shortened SHA-1) will be used to identify commits which are nodes / vertices of the commit graph.</p>
+<p><u>Test</u> that examples from the docstring works:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">#print('%r' % _repo_basename('hellogitworld'))</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> _repo_basename(<span class="st">'hellogitworld'</span>) <span class="op">==</span> <span class="st">'hellogitworld'</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="co">#print('%r' % _repo_basename('hellogitworld.git'))</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> _repo_basename(<span class="st">'hellogitworld.git'</span>) <span class="op">==</span> <span class="st">'hellogitworld'</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co">#print('%r' % _repo_basename('repos/hellogitworld.git'))</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> _repo_basename(<span class="st">'repos/hellogitworld.git'</span>) <span class="op">==</span> <span class="st">'hellogitworld'</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co">#print('%r' % _repo_basename('repos/hellogitworld/.git'))</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="co">#assert _repo_basename('repos/hellogitworld/.git') == 'hellogitworld'</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> _commit_graph_name(<span class="st">'hellogitworld'</span>) <span class="op">==</span> <span class="st">'hellogitworld-commit_graph'</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> _repo_graph_name(<span class="st">'repos/hellogitworld.git'</span>) <span class="op">==</span> <span class="st">'hellogitworld-commit_graph'</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let’s <strong>test</strong> the easy-to-test internal function <strong><code>_repo_graph_savefile()</code></strong>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> _savefile_name(<span class="st">'example_graph'</span>, kind<span class="op">=</span><span class="st">'adjlist'</span>, file_format<span class="op">=</span><span class="st">'txt'</span>) <span class="op">==</span> Path(<span class="st">'datasets/example_graph.adjlist.txt'</span>)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> _savefile_name(<span class="st">'example_graph'</span>, out_dir<span class="op">=</span><span class="st">'data'</span>, kind<span class="op">=</span><span class="st">'adjlist'</span>, file_format<span class="op">=</span><span class="st">'txt'</span>) <span class="op">==</span> Path(<span class="st">'data/example_graph.adjlist.txt'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> _repo_graph_savefile(<span class="st">'repos/hellogitworld.git'</span>) <span class="op">==</span> Path(<span class="st">'datasets/hellogitworld-commit_graph.adjlist.txt'</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> _repo_graph_savefile(<span class="st">'repos/hellogitworld.git'</span>, out_dir<span class="op">=</span><span class="st">'data'</span>) <span class="op">==</span> Path(<span class="st">'data/hellogitworld-commit_graph.adjlist.txt'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<blockquote class="blockquote">
+<p>TODO: Fix the problem with generating savefile name if the repository path does not exist<br>
+<code>_repo_graph_savefile('repos/example.git')</code> returns <code>WindowsPath</code>, not <code>Path</code> (???)</p>
+</blockquote>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">#assert _repo_graph_savefile('repos/example.git') == Path('datasets/example-commit_graph.adjlist.txt')</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="co">#assert _repo_graph_savefile('repos/example.git', out_dir='data') == Path('data/example-commit_graph.adjlist.txt')</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'</span><span class="sc">%r</span><span class="st">'</span> <span class="op">%</span> _repo_basename(<span class="st">'repos/example.git'</span>))</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'</span><span class="sc">%r</span><span class="st">'</span> <span class="op">%</span> _commit_graph_name(<span class="st">'example'</span>))</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'</span><span class="sc">%r</span><span class="st">'</span> <span class="op">%</span> _repo_graph_name(<span class="st">'repos/example.git'</span>))</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'</span><span class="sc">%r</span><span class="st">'</span> <span class="op">%</span> _repo_graph_savefile(<span class="st">'repos/example.git'</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>'example'
+'example-commit_graph'
+'example-commit_graph'
+WindowsPath('datasets/example-commit_graph.adjlist.txt')</code></pre>
+</div>
+</div>
+<pre><code>/opt/hostedtoolcache/Python/3.9.16/x64/lib/python3.9/site-packages/fastcore/docscrape.py:225: UserWarning: Unknown section Format
+  else: warn(msg)</code></pre>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/commit_graph.py#L219" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="repo_generate_adjlist" class="level3">
+<h3 class="anchored" data-anchor-id="repo_generate_adjlist">repo_generate_adjlist</h3>
+<blockquote class="blockquote">
+<pre><code> repo_generate_adjlist (repo_path, out_dir='datasets', refresh=False)</code></pre>
+</blockquote>
+<p>Generate graph of revisions in the adjacency list format</p>
+<p>Can be read with <code>nx.read_adjlist()</code>; don’t forget to ensure that NetworkX generates <em>directed</em> graph.</p>
+<blockquote class="blockquote">
+<blockquote class="blockquote">
+<blockquote class="blockquote">
+<blockquote class="blockquote">
+<p>path = repo_generate_adjlist(“repos/git.git”) graph = nx.read_adjlist(path, create_using=nx.DiGraph)</p>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+<p>By default it does not recreate the file if it exists already, unless <code>refresh=True</code> argument is passed.</p>
+<table class="table">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 25%">
+<col style="width: 34%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th><strong>Type</strong></th>
+<th><strong>Default</strong></th>
+<th><strong>Details</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>repo_path</td>
+<td>str</td>
+<td></td>
+<td>Path to the Git repository</td>
+</tr>
+<tr class="even">
+<td>out_dir</td>
+<td>str</td>
+<td>datasets</td>
+<td>Directory where extracted commit graph data would be stored.<br>Defaults to “datasets”.</td>
+</tr>
+<tr class="odd">
+<td>refresh</td>
+<td>bool</td>
+<td>False</td>
+<td>Whether to regenerate the file with the commit graph in adjacency<br>format if it exists. Defaults to false.</td>
+</tr>
+<tr class="even">
+<td><strong>Returns</strong></td>
+<td><strong>Path</strong></td>
+<td></td>
+<td><strong>Path where the commit graph in the adjacency file format<br>can be found.</strong></td>
+</tr>
+</tbody>
+</table>
+<p>To process the commit graph, we need to create a NetworkX <em>directed</em> graph from it, using adjacency list file in text format, generated using <code>git log</code> with appropriate parameters.</p>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/commit_graph.py#L275" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="repo_adjlist_to_graph" class="level3">
+<h3 class="anchored" data-anchor-id="repo_adjlist_to_graph">repo_adjlist_to_graph</h3>
+<blockquote class="blockquote">
+<pre><code> repo_adjlist_to_graph (repo_path, datasets_dir='datasets')</code></pre>
+</blockquote>
+<p>Create <code>DiGraph</code> out of adjacency list file created from it</p>
+<p>NOTE: the <code>repo_to_graph()</code> function is safer to use, as it generates the graph of commits in the adjacency list file format of needed.</p>
+<table class="table">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 25%">
+<col style="width: 34%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th><strong>Type</strong></th>
+<th><strong>Default</strong></th>
+<th><strong>Details</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>repo_path</td>
+<td>str</td>
+<td></td>
+<td>Path to the Git repository</td>
+</tr>
+<tr class="even">
+<td>datasets_dir</td>
+<td>str</td>
+<td>datasets</td>
+<td>Directory where extracted commit graph data would be stored.<br>Defaults to “datasets”.</td>
+</tr>
+<tr class="odd">
+<td><strong>Returns</strong></td>
+<td><strong>nx.DiGraph</strong></td>
+<td></td>
+<td><strong>Directed graph of revisions as NetworkX’s <code>DiGraph</code></strong></td>
+</tr>
+</tbody>
+</table>
+<p>Tying it all together, to get a directed graph of revision history of a given repository into NetworkX <code>DiGraph</code>, we need to create a sparse clone of a repository if it does not exist, write log of revision history in adjacency list format if the file does not exist, and create the commit graph as NetworkX <code>DiGraph</code>.</p>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/commit_graph.py#L328" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="commit_graph" class="level3">
+<h3 class="anchored" data-anchor-id="commit_graph">commit_graph</h3>
+<blockquote class="blockquote">
+<pre><code> commit_graph (url, repo_name, repos_dir='repos', datasets_dir='datasets',
+               reclone=False, rescan=False)</code></pre>
+</blockquote>
+<p>Create a graph of commits for given remote repository, stored locally</p>
+<p>Given a Git repository <code>url</code>, clone it as <code>repo_name</code> in <code>repo_dir</code> directory, then create a graph of its commits as NetworkX <code>DiGraph</code>.</p>
+<p>Avoids re-cloning of the remote repository unless <code>reclone=True</code> is passed, and avoids rescanning the local copy of the repository if file in the adjacency list format with the commit graph information exists unless <code>rescan=True</code> is passed.</p>
+<table class="table">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 25%">
+<col style="width: 34%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th><strong>Type</strong></th>
+<th><strong>Default</strong></th>
+<th><strong>Details</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>url</td>
+<td>str</td>
+<td></td>
+<td>The repository to be cloned, in most cases it would be public URL<br>that can be used to clone the remote repository.</td>
+</tr>
+<tr class="even">
+<td>repo_name</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>repos_dir</td>
+<td>str</td>
+<td>repos</td>
+<td>The directory where to put cloned repository into.<br>By default “repos” is used.</td>
+</tr>
+<tr class="even">
+<td>datasets_dir</td>
+<td>str</td>
+<td>datasets</td>
+<td>Directory where extracted commit graph data can be stored, or will<br>be stored. Defaults to “datasets”.</td>
+</tr>
+<tr class="odd">
+<td>reclone</td>
+<td>bool</td>
+<td>False</td>
+<td>Whether to re-clone the repository if the local clone exists.<br>Default is false, to not perform a clone if not needed.</td>
+</tr>
+<tr class="even">
+<td>rescan</td>
+<td>bool</td>
+<td>False</td>
+<td>Whether to regenerate the file with the commit graph in adjacency<br>format if it exists. Defaults to false.</td>
+</tr>
+<tr class="odd">
+<td><strong>Returns</strong></td>
+<td><strong>nx.DiGraph</strong></td>
+<td></td>
+<td><strong>Directed graph of revisions as NetworkX’s <code>DiGraph</code></strong></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><a href="https://github.com/jnareb/git-commit-graph-ext/tree/master/blob/master/git_commit_graph_ext/commit_graph.py#L299" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="repo_to_graph" class="level3">
+<h3 class="anchored" data-anchor-id="repo_to_graph">repo_to_graph</h3>
+<blockquote class="blockquote">
+<pre><code> repo_to_graph (repo_path, datasets_dir='datasets', refresh=False)</code></pre>
+</blockquote>
+<p>Create a graph of commits for given local repository</p>
+<p>It uses existing file with the commit graph in the adjacency list file format, unless refresh is requested with <code>refresh=True</code>. Automatically generates such file if it does not exist.</p>
+<table class="table">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 25%">
+<col style="width: 34%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th><strong>Type</strong></th>
+<th><strong>Default</strong></th>
+<th><strong>Details</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>repo_path</td>
+<td>str</td>
+<td></td>
+<td>Path to the local Git repository</td>
+</tr>
+<tr class="even">
+<td>datasets_dir</td>
+<td>str</td>
+<td>datasets</td>
+<td>Directory where extracted commit graph data can be stored, or will<br>be stored. Defaults to “datasets”.</td>
+</tr>
+<tr class="odd">
+<td>refresh</td>
+<td>bool</td>
+<td>False</td>
+<td>Whether to regenerate the file with the commit graph in adjacency<br>format if it exists. Defaults to false.</td>
+</tr>
+<tr class="even">
+<td><strong>Returns</strong></td>
+<td><strong>nx.DiGraph</strong></td>
+<td></td>
+<td><strong>Directed graph of revisions as NetworkX’s <code>DiGraph</code></strong></td>
+</tr>
+</tbody>
+</table>
+<p>Instead of testing all those functions one by one, let’s simply <strong>test the final one</strong>, namely <strong><code>commit_graph()</code></strong>, which would would as an integration test. It would stress test almost all other functions.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># remove the test repository</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> shutil <span class="im">import</span> rmtree</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="co"># check the format of node names</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>repo_url<span class="op">=</span><span class="st">"https://github.com/githubtraining/hellogitworld"</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>repo_path<span class="op">=</span><span class="st">"repos/hellogitworld.git"</span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>repo_name<span class="op">=</span><span class="st">"hellogitworld.git"</span></span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a><span class="co">#rmtree(repo_path, ignore_errors=True)</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a><span class="co"># get commit graph of remote repository</span></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>graph <span class="op">=</span> commit_graph(repo_url, repo_name, rescan<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a><span class="co"># find sinks (roots in git terminology) and sources (heads in git terminology)</span></span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>sinks  <span class="op">=</span>[n <span class="cf">for</span> n <span class="kw">in</span> graph <span class="cf">if</span> graph.out_degree(n) <span class="op">==</span> <span class="dv">0</span>]</span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>sources<span class="op">=</span>[n <span class="cf">for</span> n <span class="kw">in</span> graph <span class="cf">if</span> graph.in_degree(n)  <span class="op">==</span> <span class="dv">0</span>]</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">isinstance</span>(graph, nx.DiGraph)</span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - commit_graph() result is `DiGraph`'</span>)</span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a><span class="co"># this is an archived repository, so it should not change at all</span></span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> graph.number_of_nodes() <span class="op">==</span> <span class="dv">55</span></span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - number of nodes </span><span class="sc">{:d}</span><span class="st"> matches 55 commits on all branches'</span>.<span class="bu">format</span>(graph.number_of_nodes()))</span>
+<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> graph.number_of_edges() <span class="op">==</span> <span class="dv">53</span></span>
+<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - number of edges </span><span class="sc">{:d}</span><span class="st"> matches'</span>.<span class="bu">format</span>(graph.number_of_edges()))</span>
+<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">len</span>(sources) <span class="op">==</span> <span class="dv">6</span></span>
+<span id="cb21-26"><a href="#cb21-26" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - number of sources </span><span class="sc">{:d}</span><span class="st"> matches 6 independent branches'</span>.<span class="bu">format</span>(<span class="bu">len</span>(sources)))</span>
+<span id="cb21-27"><a href="#cb21-27" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">len</span>(sinks) <span class="op">==</span> <span class="dv">4</span></span>
+<span id="cb21-28"><a href="#cb21-28" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - number of sinks </span><span class="sc">{:d}</span><span class="st"> matches number of unrelated branches'</span>.<span class="bu">format</span>(<span class="bu">len</span>(sinks)))</span>
+<span id="cb21-29"><a href="#cb21-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-30"><a href="#cb21-30" aria-hidden="true" tabindex="-1"></a>id_regexp <span class="op">=</span> re.<span class="bu">compile</span>(<span class="vs">r'^[0-9a-f]+$'</span>)</span>
+<span id="cb21-31"><a href="#cb21-31" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">all</span>([id_regexp.fullmatch(node) <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span> <span class="cf">for</span> node <span class="kw">in</span> graph.nodes])</span>
+<span id="cb21-32"><a href="#cb21-32" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'ok - all node names looks like object identifiers (are hexdigits)'</span>)</span>
+<span id="cb21-33"><a href="#cb21-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-34"><a href="#cb21-34" aria-hidden="true" tabindex="-1"></a><span class="co"># attempt cleanup</span></span>
+<span id="cb21-35"><a href="#cb21-35" aria-hidden="true" tabindex="-1"></a><span class="co">#rmtree(repo_path, ignore_errors=True)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>ok - commit_graph() result is `DiGraph`
+ok - number of nodes 55 matches 55 commits on all branches
+ok - number of edges 53 matches
+ok - number of sources 6 matches 6 independent branches
+ok - number of sinks 4 matches number of unrelated branches
+ok - all node names looks like object identifiers (are hexdigits)</code></pre>
+</div>
+</div>
+<p>The <a href="https://github.com/githubtraining/hellogitworld" class="uri">https://github.com/githubtraining/hellogitworld</a> repository has: - 26 commits on the ‘master’ branch - 55 commits on all branches - 345 commits among all references, including pull requests (5 open, 156 closed)</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># this plot is here to check if the number of edges found is plausible</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    <span class="im">import</span> pydot</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>    fig<span class="op">=</span>plt.figure(figsize<span class="op">=</span>(<span class="dv">8</span>,<span class="dv">7</span>))</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>    plt.suptitle(<span class="st">'The commit graph of https://github.com/githubtraining/hellogitworld repository</span><span class="ch">\n</span><span class="st">'</span><span class="op">+</span></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>                 <span class="st">'source nodes are red, sink nodes are yellow, isolated nodes are yellow with red outline'</span>)</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>    plt.title(<span class="st">"drawn using 'dot' algorithm from GraphViz, via 'pydot' module"</span>)</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>    pos<span class="op">=</span>nx.drawing.nx_pydot.pydot_layout(graph, prog<span class="op">=</span><span class="st">'dot'</span>)</span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>    nx.draw(graph, pos<span class="op">=</span>pos,</span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>            node_size<span class="op">=</span><span class="dv">80</span>,width<span class="op">=</span><span class="fl">1.0</span>,node_color<span class="op">=</span><span class="st">'#FF7F00'</span>)</span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>    nx.draw_networkx_nodes(graph, pos<span class="op">=</span>pos, nodelist<span class="op">=</span>sources,</span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>                           node_size<span class="op">=</span><span class="dv">90</span>,node_color<span class="op">=</span><span class="st">'#FF1100'</span>)</span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>    nx.draw_networkx_nodes(graph, pos<span class="op">=</span>pos, nodelist<span class="op">=</span>sinks,</span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>                           node_size<span class="op">=</span><span class="dv">60</span>,node_color<span class="op">=</span><span class="st">'#FFDD00'</span>)</span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a>    plt.draw()</span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> <span class="pp">ModuleNotFoundError</span>:</span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"'pydot' module not installed"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>'pydot' module not installed</code></pre>
+</div>
+</div>
+<hr>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
